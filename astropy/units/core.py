@@ -1710,9 +1710,10 @@ class UnrecognizedUnit(IrreducibleUnit):
         _unrecognized_operator
 
     def __eq__(self, other):
+        if other is None:
+            return False
         other = Unit(other, parse_strict='silent')
         return isinstance(other, UnrecognizedUnit) and self.name == other.name
-
     def __ne__(self, other):
         return not (self == other)
 
