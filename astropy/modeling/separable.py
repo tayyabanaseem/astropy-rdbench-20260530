@@ -184,10 +184,11 @@ def _coord_matrix(model, pos, noutp):
         is a left or right child.
 
     """
+    if isinstance(model, CompoundModel):
+        return _separable(model)
     if isinstance(model, Mapping):
         axes = []
-        for i in model.mapping:
-            axis = np.zeros((model.n_inputs,))
+        for i in model.mapping:            axis = np.zeros((model.n_inputs,))
             axis[i] = 1
             axes.append(axis)
         m = np.vstack(axes)
