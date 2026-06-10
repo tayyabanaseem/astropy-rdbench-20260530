@@ -204,15 +204,15 @@ def _coord_matrix(model, pos, noutp):
         mat = np.zeros((noutp, model.n_inputs))
         if pos == 'left':
             mat[:model.n_outputs, : model.n_inputs] = 1
-        else:
-            mat[-model.n_outputs:, -model.n_inputs:] = 1
     else:
         mat = np.zeros((noutp, model.n_inputs))
 
-        for i in range(model.n_inputs):
-            mat[i, i] = 1
-        if pos == 'right':
-            mat = np.roll(mat, (noutp - model.n_outputs))
+        if pos == "right":
+            for i in range(model.n_inputs):
+                mat[noutp - model.n_outputs + i, i] = 1
+        else:
+            for i in range(model.n_inputs):
+                mat[i, i] = 1
     return mat
 
 
