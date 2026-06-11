@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""Functions related to Python runtime introspection."""
-
-
+"""Utilities for introspection."""
+import re
 import inspect
+from operator import ge, gt
+from types import ModuleType
 import types
 import importlib
 from distutils.version import LooseVersion
@@ -144,11 +144,29 @@ def minversion(module, version, inclusive=True, version_path='__version__'):
     else:
         return LooseVersion(have_version) > LooseVersion(version)
 
+        else:
+            raise
 
-def find_current_module(depth=1, finddiff=False):
-    """
-    Determines the module/package from which this function is called.
+    # Regex to normalize version strings to avoid LooseVersion bug with dev versions
+    # See https://bugs.python.org/issue30272
+    version_regex = re.compile(r'^(\d+(?:\.\d+)*)'  # numeric version
+                                r'(?:(?:a|alpha|b|beta|rc|dev|post).*)?$',  # optional pre/post release
+                                re.IGNORECASE)
 
+    def extract_numeric_version(v):
+        """Extract numeric version part to avoid LooseVersion comparison bugs."""
+        match = version_regex.match(str(v))
+        if match:
+            return match.group(1)
+        return str(v)
+
+    # Use the numeric parts for comparison to avoid LooseVersion bugs when comparing versions with pre-release identifiers
+    try:
+        return comp(Version(extract_numeric_version(module_version)),
+                    Version(extract_numeric_version(version)))
+    except TypeError:
+        # Fallback to full version comparison
+        return comp(Version(module_version), Version(version))
     This function has two modes, determined by the ``finddiff`` option. it
     will either simply go the requested number of frames up the call
     stack (if ``finddiff`` is False), or it will go up the call stack until
