@@ -33,23 +33,21 @@ class CDS(Base):
     by VOTable up to version 1.2.
     """
 
-    _tokens = (
-        "PRODUCT",
-        "DIVISION",
-        "OPEN_PAREN",
-        "CLOSE_PAREN",
-        "OPEN_BRACKET",
-        "CLOSE_BRACKET",
-        "X",
-        "SIGN",
-        "UINT",
-        "UFLOAT",
-        "UNIT",
-        "DIMENSIONLESS",
-    )
+        # All the atomic units
+        unit_atom = Word(alphas + "%", min=1, max=10)
 
-    @classproperty(lazy=True)
-    def _units(cls):
+        # unit_spec handles: unit_atom (/ unit_atom)*
+        integer = Word(nums)
+        mantissa = Optional(Word(nums))
+        sign = Optional(oneOf("+ -"))
+        exponent = CaselessLiteral("E") + sign + integer
+        number = Combine(mantissa + exponent)
+
+        unit_spec = Group(Optional(number) +
+                         ZeroOrMore(unit_atom) +
+                        ZeroOrMore(Literal("/") + OneOrMore(unit_atom)))
+
+        return unit_spec
         return cls._generate_unit_names()
 
     @classproperty(lazy=True)
