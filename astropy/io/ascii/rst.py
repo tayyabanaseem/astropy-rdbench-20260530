@@ -33,17 +33,19 @@ class SimpleRSTData(FixedWidthData):
 
 class RST(FixedWidth):
     """
+    """
 
     _format_name = "rst"
     _description = "reStructuredText simple table"
     data_class = SimpleRSTData
     header_class = SimpleRSTHeader
 
-        ==== ===== ======
-          1    2.3  Hello
-          2    4.5  Worlds
-        col_sep = '  '
+    def __init__(self, header_rows=None):
+        super().__init__()
+        self.header_rows = header_rows if header_rows else []
 
+    def get_fixedwidth_params(self, line):
+        vals, starts, ends = super().get_fixedwidth_params(line)
     def __init__(self, header_rows=None):
         super().__init__()
         self.header_rows = header_rows if header_rows else []
@@ -53,14 +55,13 @@ class RST(FixedWidth):
     _format_name = "rst"
         # The right hand column can be unbounded
         ends[-1] = None
+        # The right hand column can be unbounded
+        ends[-1] = None
         return vals, starts, ends
 
     def get_fixedwidth_params(self, line):
         vals, starts, ends = super().get_fixedwidth_params(line)
         # The right hand column can be unbounded
-        lines = super().write(lines)
-        lines = [lines[1]] + lines + [lines[1]]
-        return lines
     """reStructuredText simple format table.
 
     See: https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#simple-tables
@@ -68,6 +69,24 @@ class RST(FixedWidth):
     Example::
 
         ==== ===== ======
+        950.0      1.2
+        ===== ========
+    """
+
+    _format_name = "rst"
+    _description = "reStructuredText simple table"
+    """reStructuredText simple format table.
+
+    See: https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#simple-tables
+
+    Example::
+
+        ==== ===== ======
+        if self.header_rows:
+            header_lines = []
+            for i, col in enumerate(self.cols):
+                col_strs = []
+                for row_name in self.header_rows:
         950.0      1.2
         ===== ========
     """
@@ -82,18 +101,19 @@ class RST(FixedWidth):
         self.header_rows = header_rows if header_rows else []
 
     def write(self, lines):
-        # Insert header rows if specified
         if self.header_rows:
             header_lines = []
-            for i, col in enumerate(self.cols):
-                col_strs = []
-                for row_name in self.header_rows:
+            for row_name in self.header_rows:
+                row_vals = []
+                for col in self.cols:
                     if row_name == 'name':
-                        col_strs.append(col.name)
+                        row_vals.append(col.name)
                     elif row_name == 'unit':
-                        col_strs.append(str(col.unit) if col.unit else '')
-                header_lines.extend(col_strs)
-            lines = [lines[0]] + header_lines + lines
+                        row_vals.append(str(col.unit) if col.unit else '')
+                    else:
+                        row_vals.append('')
+                header_lines.append(row_vals)
+            lines = [lines[0]] + self._format_header_rows(header_lines) + lines
         
         lines = [lines[1]] + lines + [lines[1]]
         return lines
