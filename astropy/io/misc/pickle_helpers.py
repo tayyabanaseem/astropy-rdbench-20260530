@@ -117,3 +117,8 @@ def fnpickle(object, fileorname, usecPickle=NoValue, protocol=None,
     finally:
         if close:
             f.close()
+    return res
+def fnupickle(fileorname, number=0, usecPickle=NoValue):
+    """ Unpickle pickled objects from a specified file and return the contents.
+    Parameters
+    ----------
