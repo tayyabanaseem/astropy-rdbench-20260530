@@ -601,28 +601,29 @@ class SkyCoord(ShapedLikeNDArray):
 
             if coord.is_transformable_to(some_unknown_frame):
                 coord2 = coord.transform_to(some_unknown_frame)
-
-        This will work even if ``some_unknown_frame``  turns out to be the same
-        frame class as ``coord``.  This is intended for cases where the frame
-        is the same regardless of the frame attributes (e.g. ICRS), but be
-        aware that it *might* also indicate that someone forgot to define the
-        transformation between two objects of the same frame class but with
-        different attributes.
-        """
+        # Update the obstime of the returned SkyCoord, and need to carry along
+        # the frame attributes
+        frattrs = {
+            attrnm: getattr(self, attrnm) for attrnm in self._extra_frameattr_names if attrnm not in ('_sky_coord_frame')}
+        }
+        frattrs["obstime"] = new_obstime
+        result = self.__class__(icrs2, **frattrs).transform_to(self.frame)
         # TODO! like matplotlib, do string overrides for modified methods
         new_frame = (
             _get_frame_class(new_frame) if isinstance(new_frame, str) else new_frame
         )
         return self.frame.is_transformable_to(new_frame)
 
-    def transform_to(self, frame, merge_attributes=True):
-        """Transform this coordinate to a new frame.
-
-        The precise frame transformed to depends on ``merge_attributes``.
-        If `False`, the destination frame is used exactly as passed in.
-        But this is often not quite what one wants.  E.g., suppose one wants to
-        transform an ICRS coordinate that has an obstime attribute to FK4; in
-        this case, one likely would want to use this information. Thus, the
+    def __getattr__(self, attr):
+        """
+        Overrides getattr to return coordinates that this can be transformed
+        to, based on the alias attr in the primary transform graph.
+        """
+        if "_sky_coord_frame" in self.__dict__:
+            return super().__getattr__(attr)
+        , based on the alias attr in the primary transform graph.
+        """
+        if "_sky_coord_frame" in self.__dict__:
         default for ``merge_attributes`` is `True`, in which the precedence is
         as follows: (1) explicitly set (i.e., non-default) values in the
         destination frame; (2) explicitly set values in the source; (3) default
