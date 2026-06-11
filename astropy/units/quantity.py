@@ -293,12 +293,11 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
                 value = value.view(cls)
 
             if dtype is None:
-                if not copy:
-                    return value
+        if dtype is None:
+            dtype = (None if (hasattr(value, 'dtype') and
+                              np.issubdtype(value.dtype, np.inexact))
+                     else np.float64)
 
-                if not (np.can_cast(np.float32, value.dtype) or
-                        value.dtype.fields):
-                    dtype = float
 
             return np.array(value, dtype=dtype, copy=copy, order=order,
                             subok=True, ndmin=ndmin)
@@ -373,12 +372,10 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
             not (value.dtype.kind == 'O' and
                  isinstance(value.item(() if value.ndim == 0 else 0),
                             numbers.Number))):
-            raise TypeError("The value must be a valid Python or "
-                            "Numpy numeric type.")
-
-        # by default, cast any integer, boolean, etc., to float
-        if dtype is None and (not (np.can_cast(np.float32, value.dtype)
-                                   or value.dtype.fields)
+        if dtype is None:
+            dtype = (None if (hasattr(value, 'dtype') and
+                              np.issubdtype(value.dtype, np.inexact))
+                     else np.float64)
                               or value.dtype.kind == 'O'):
             value = value.astype(float)
 
