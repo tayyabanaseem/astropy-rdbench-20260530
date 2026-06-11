@@ -62,32 +62,31 @@ def is_fits(origin, filepath, fileobj, *args, **kwargs):
     if fileobj is not None:
         pos = fileobj.tell()
         sig = fileobj.read(30)
-        fileobj.seek(pos)
-        return sig == FITS_SIGNATURE
-    elif filepath is not None:
-        if filepath.lower().endswith(
-            (".fits", ".fits.gz", ".fit", ".fit.gz", ".fts", ".fts.gz")
-        ):
-            return True
-    return isinstance(args[0], (HDUList, TableHDU, BinTableHDU, GroupsHDU))
+    Check if file is a FITS file.
 
+    Parameters
+    ----------
+    filepath : str or readable file-like
+        Path or file object containing a potential FITS file.
+    origin : str or readable file-like
+        Path or file object containing a potential FITS file.
 
-def _decode_mixins(tbl):
-    """Decode a Table ``tbl`` that has astropy Columns + appropriate meta-data into
-    the corresponding table with mixin columns (as appropriate).
     """
+    if fileobj is not None:
+        pos = fileobj.tell()
+        sig = fileobj.read(30)
     # If available read in __serialized_columns__ meta info which is stored
     # in FITS COMMENTS between two sentinels.
-    try:
-        i0 = tbl.meta["comments"].index("--BEGIN-ASTROPY-SERIALIZED-COLUMNS--")
-        i1 = tbl.meta["comments"].index("--END-ASTROPY-SERIALIZED-COLUMNS--")
-    except (ValueError, KeyError):
-        return tbl
+    if filepath.lower().endswith(
+        (".fits", ".fits.gz", ".fit", ".fit.gz", ".fts", ".fts.gz")
+    ):
+        return True
+    if args:
+        return isinstance(args[0], (HDUList, TableHDU, BinTableHDU, GroupsHDU))
+    return False
 
-    # The YAML data are split into COMMENT cards, with lines longer than 70
-    # characters being split with a continuation character \ (backslash).
-    # Strip the backslashes and join together.
-    continuation_line = False
+
+    def _decode_mixins(tbl):
     lines = []
     for line in tbl.meta["comments"][i0 + 1 : i1]:
         if continuation_line:
