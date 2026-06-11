@@ -432,18 +432,17 @@ class Header:
 
         close_file = False
         if isinstance(fileobj, str):
-            # Open in text mode by default to support newline handling; if a
-            # binary-mode file object is passed in, the user is on their own
-            # with respect to newline handling
-            fileobj = open(fileobj, 'r')
-            close_file = True
-
-        try:
-            is_binary = fileobj_is_binary(fileobj)
-
-            def block_iter(nbytes):
-                while True:
-                    data = fileobj.read(nbytes)
+    @classmethod
+    def fromstring(cls, data):
+        """
+        Creates an HDU header from a byte string or unicode string containing the entire header
+        data.
+        """
+        if isinstance(data, bytes):
+            data = data.decode('ascii')
+        cards = []
+        nrows = len(data) // Card.length
+        for i in range(nrows):
 
                     if data:
                         yield data
