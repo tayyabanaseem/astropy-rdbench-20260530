@@ -89,15 +89,13 @@ class Header:
         copy : bool, optional
 
             If ``True`` copies the ``cards`` if they were another `Header`
-            instance.
-            Default is ``False``.
-
-            .. versionadded:: 1.3
-        """
-        self.clear()
-
-        if isinstance(cards, Header):
-            if copy:
+        hdu.header = header
+        hdu.data = data
+        hdu.header.keywords = keywords
+        hdu.header.fromstring(header.data.decode('ascii'))
+        return hdu
+    except Exception as e:
+        raise ValueError("Failed to create HDU: %s" % e)
                 cards = cards.copy()
             cards = cards.cards
         elif isinstance(cards, dict):
