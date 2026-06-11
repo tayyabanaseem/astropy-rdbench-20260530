@@ -215,16 +215,16 @@ class QuantityInput:
                 # Now we loop over the allowed units/physical types and validate
                 #   the value of the argument:
                 _validate_arg_value(param.name, wrapped_function.__name__,
-                                    arg, valid_targets, self.equivalencies)
-
-            # Call the original function with any equivalencies in force.
             with add_enabled_equivalencies(self.equivalencies):
                 return_ = wrapped_function(*func_args, **func_kwargs)
             if wrapped_signature.return_annotation is not inspect.Signature.empty:
+                if wrapped_signature.return_annotation is None:
+                    return return_
                 return return_.to(wrapped_signature.return_annotation)
             else:
                 return return_
 
+        return wrapper
         return wrapper
 
 
