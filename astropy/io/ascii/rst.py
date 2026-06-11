@@ -64,3 +64,12 @@ class RST(FixedWidth):
         lines = super().write(lines)
         lines = [lines[1]] + lines + [lines[1]]
         return lines
+    """
+    header_class = SimpleRSTHeader
+
+    def __init__(self, header_rows=None):
+        super().__init__(delimiter_pad=None, bookend=False)
+        if header_rows is not None:
+            self.header.header_rows = header_rows
+
+    def write(self, lines):
