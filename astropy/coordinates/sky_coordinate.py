@@ -615,16 +615,17 @@ class SkyCoord(ShapedLikeNDArray):
         )
         return self.frame.is_transformable_to(new_frame)
 
-    def transform_to(self, frame, merge_attributes=True):
-        """Transform this coordinate to a new frame.
-
-        The precise frame transformed to depends on ``merge_attributes``.
-        If `False`, the destination frame is used exactly as passed in.
-        But this is often not quite what one wants.  E.g., suppose one wants to
-        transform an ICRS coordinate that has an obstime attribute to FK4; in
-        this case, one likely would want to use this information. Thus, the
-        default for ``merge_attributes`` is `True`, in which the precedence is
-        as follows: (1) explicitly set (i.e., non-default) values in the
+    def __getattr__(self, attr):
+        """
+        Overrides getattr to return coordinates that this can be transformed
+        to, based on the alias attr in the primary transform graph.
+        """
+        if "_sky_coord_frame" not in self.__dict__:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{attr}'")
+        
+        if attr in self._frame_attrs:
+            return getattr(self._sky_coord_frame, attr)
+        
         destination frame; (2) explicitly set values in the source; (3) default
         value in the destination frame.
 
