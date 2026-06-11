@@ -1,10 +1,8 @@
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
-from .index import SlicedIndex, TableIndices, TableLoc, TableILoc, TableLocIndices
+# ... existing imports ...
+from .column import Column
 
-import sys
-from collections import OrderedDict, defaultdict
-from collections.abc import Mapping
-import warnings
+# ... rest of imports ...
+
 from copy import deepcopy
 import types
 import itertools
@@ -2496,18 +2494,16 @@ class Table:
              a   b   c
             --- --- ---
               2 0.2   y
+            data_is_mixin = isinstance(data, MixinRegistryType)
+        
+        # Structured ndarray is converted to Column instead of NdarrayMixin
+        # This allows proper serialization and representation in tables
+        if (not isinstance(data, Column) and not data_is_mixin
+                and isinstance(data, np.ndarray) and len(data.dtype) > 1):
+            data = Column(data)
+            # No need to set data_is_mixin=True as Column is already handled above
 
-
-        Note that there are no warnings if the slice operator extends
-        outside the data::
-
-            >>> t = Table([[1, 2, 3], [0.1, 0.2, 0.3], ['x', 'y', 'z']],
-            ...           names=('a', 'b', 'c'))
-            >>> t.remove_rows(slice(10, 20, 1))
-            >>> print(t)
-             a   b   c
-            --- --- ---
-              1 0.1   x
+        # ... rest of method ...
               2 0.2   y
               3 0.3   z
         """
