@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""Functions related to Python runtime introspection."""
+"""Utility functions for introspection."""
 
-
-import inspect
+import re
 import types
+
+from distutils.version import LooseVersion
 import importlib
 from distutils.version import LooseVersion
 
@@ -136,18 +136,35 @@ def minversion(module, version, inclusive=True, version_path='__version__'):
 
     if '.' not in version_path:
         have_version = getattr(module, version_path)
-    else:
-        have_version = resolve_name(module.__name__, version_path)
+        have_version = getattr(module, version_path)
 
     if inclusive:
-        return LooseVersion(have_version) >= LooseVersion(version)
+        return LooseVersion(_parse_version(have_version)) >= LooseVersion(_parse_version(version))
     else:
-        return LooseVersion(have_version) > LooseVersion(version)
+        return LooseVersion(_parse_version(have_version)) > LooseVersion(_parse_version(version))
+
+
+def _parse_version(version):
+    """
+    Parse version string to avoid LooseVersion bug with mixed int/str components.
+    
+    Workaround for https://bugs.python.org/issue30272
+    LooseVersion fails when comparing versions like '1.14.3' >= '1.14dev'
+    because the parsed components become mixed types (int and str).
+    
+    This regex ensures all components are strings, making comparison safe.
+    """
+    # Ensure we're working with a string
+    version = str(version)
+    # Use regex to split version into numeric and non-numeric parts
+    # This prevents LooseVersion from creating mixed int/str component lists
+    parts = re.split(r'(\d+)', version)
+    # Filter empty strings and rejoin to normalize format
+    return ''.join(parts)
 
 
 def find_current_module(depth=1, finddiff=False):
     """
-    Determines the module/package from which this function is called.
 
     This function has two modes, determined by the ``finddiff`` option. it
     will either simply go the requested number of frames up the call
