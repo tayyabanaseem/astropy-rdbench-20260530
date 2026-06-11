@@ -355,11 +355,14 @@ class HTML(core.BaseReader):
 
         self.data._set_fill_values(cols)
 
+        # Apply formats to columns
+        for col in cols:
+            if col.info.name in self.data.formats:
+                col.info.format = self.data.formats[col.info.name]
+
         lines = []
 
         # Set HTML escaping to False for any column in the raw_html_cols input
-        raw_html_cols = self.html.get('raw_html_cols', [])
-        if isinstance(raw_html_cols, str):
             raw_html_cols = [raw_html_cols]  # Allow for a single string as input
         cols_escaped = [col.info.name not in raw_html_cols for col in cols]
 
