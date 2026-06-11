@@ -1446,15 +1446,13 @@ class TableDataDiff(_BaseDiff):
             arrb = self.b[col.name]
 
             if np.issubdtype(arra.dtype, np.floating) and np.issubdtype(
-                arrb.dtype, np.floating
-            ):
-                diffs = where_not_allclose(arra, arrb, rtol=self.rtol, atol=self.atol)
-            elif "P" in col.format:
-                diffs = (
-                    [
-                        idx
-                        for idx in range(len(arra))
-                        if not np.allclose(
+            arrb.dtype, np.floating
+        ):
+            diffs = where_not_allclose(arra, arrb, rtol=self.rtol, atol=self.atol)
+        elif "P" in col.format or "Q" in col.format:
+            diffs = (
+                [
+                    idx
                             arra[idx], arrb[idx], rtol=self.rtol, atol=self.atol
                         )
                     ],
