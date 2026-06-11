@@ -597,16 +597,36 @@ class Quantity(np.ndarray):
         if self._unit is None:
             unit = getattr(obj, "_unit", None)
             if unit is not None:
-                self._set_unit(unit)
-
-        # Copy info if the original had `info` defined.  Because of the way the
-        # DataInfo works, `'info' in obj.__dict__` is False until the
-        # `info` attribute is accessed or set.
-        if "info" in obj.__dict__:
-            self.info = obj.info
-
-    def __array_wrap__(self, obj, context=None):
-        if context is None:
+    def __array_ufunc__(self, function, method, *inputs, **kwargs):
+        """
+        Handle ufuncs for Quantity.
+        
+        Returns NotImplemented for inputs that are not recognized Quantity-like
+        types, allowing reflected operations to be attempted.
+        """
+        # Import here to avoid circular imports
+        from astropy.table import Column
+        
+        # Check if all inputs are of recognized types that we can handle
+        # If not, return NotImplemented to allow other operands to handle the operation
+        for inp in inputs:
+            if not isinstance(inp, (Quantity, np.ndarray, Column)):
+                # Check if the input has __array__ method (duck typing support)
+                if not hasattr(inp, '__array__'):
+                    return NotImplemented
+        
+        # Check outputs similarly if they are specified
+        out = kwargs.get('out', None)
+        if out is not None:
+            for outp in out:
+                if not isinstance(outp, (Quantity, np.ndarray, Column)):
+                    if not hasattr(outp, '__array__'):
+                        return NotImplemented
+        
+        # Original implementation continues below...
+        # This should wrap the existing logic in a try-except to catch
+        # ValueError from unit conversion attempts and return NotImplemented
+        try:
             # Methods like .squeeze() created a new `ndarray` and then call
             # __array_wrap__ to turn the array into self's subclass.
             return self._new_view(obj)
