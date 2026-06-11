@@ -1449,26 +1449,34 @@ class TableDataDiff(_BaseDiff):
                 arrb.dtype, np.floating
             ):
                 diffs = where_not_allclose(arra, arrb, rtol=self.rtol, atol=self.atol)
-            elif "P" in col.format:
+            elif "P" in col.format or "Q" in col.format:
                 diffs = (
                     [
                         idx
-                        for idx in range(len(arra))
                         if not np.allclose(
                             arra[idx], arrb[idx], rtol=self.rtol, atol=self.atol
                         )
-                    ],
+                    ]
                 )
             else:
-                diffs = np.where(arra != arrb)
+                # For other array types, use element-wise comparison
+                if arra.shape != arrb.shape:
+                    diffs = list(range(len(arra)))
+                else:
+                    try:
+                        diffs = list(
+                            np.where(
+                                np.asarray(
+                                    [not np.array_equal(a, b) for a, b in zip(arra, arrb)]
+                                )
+                            )[0]
+                        )
+                    except (TypeError, ValueError):
+                        diffs = list(range(len(arra))) if not np.array_equal(arra, arrb) else []
+            else:
+                diffs = list(np.where(arra != arrb)[0])
 
-            self.diff_total += len(set(diffs[0]))
-
-            if self.numdiffs >= 0:
-                if len(self.diff_values) >= self.numdiffs:
-                    # Don't save any more diff values
-                    continue
-
+            if diffs:
                 # Add no more diff'd values than this
                 max_diffs = self.numdiffs - len(self.diff_values)
             else:
