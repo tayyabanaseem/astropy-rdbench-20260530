@@ -297,17 +297,15 @@ def _separable(transform):
         A transform (usually a compound model).
 
     Returns :
-    is_separable : ndarray of dtype np.bool
-        An array of shape (transform.n_outputs,) of boolean type
-        Each element represents the separablity of the corresponding output.
-    """
-    if (transform_matrix := transform._calculate_separability_matrix()) is not NotImplemented:
-        return transform_matrix
-    elif isinstance(transform, CompoundModel):
-        sepleft = _separable(transform.left)
-        sepright = _separable(transform.right)
-        return _operators[transform.op](sepleft, sepright)
-    elif isinstance(transform, Model):
+        -------
+        is_separable : `numpy.ndarray` of dtype bool
+        """
+
+    separability_matrix = _separable(transform)
+    is_separable = np.where(separability_matrix.sum(1) == 1, True, False)
+    is_separable = np.where(is_separable != 1, False, True)
+    return is_separable
+
         return _coord_matrix(transform, 'left', transform.n_outputs)
 
 
