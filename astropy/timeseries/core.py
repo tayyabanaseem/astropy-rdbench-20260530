@@ -74,19 +74,19 @@ class BaseTimeSeries(QTable):
                                  "as the first column{} but time series has no columns"
                                  .format(self.__class__.__name__, required_columns[0], plural))
 
-            elif self.colnames[:len(required_columns)] != required_columns:
+        """
 
-                raise ValueError("{} object is invalid - expected '{}' "
-                                 "as the first column{} but found '{}'"
-                                 .format(self.__class__.__name__, required_columns[0], plural, self.colnames[0]))
+    _required_columns = ['time']
+    
+    def __init__(self, data=None, *, time=None, time_start=None,
+        time_delta=None, n_samples=None, **kwargs):
+        super().__init__(data=data, **kwargs)
 
-            if (self._required_columns_relax
-                    and self._required_columns == self.colnames[:len(self._required_columns)]):
-                self._required_columns_relax = False
+        # Check that all required columns are present
+        missing_columns = set(self._required_columns) - set(self.colnames)
+        if missing_columns:
+            raise ValueError(f"TimeSeries object is invalid - required {self._required_columns} as the first columns but found {self.colnames}")
 
-    @contextmanager
-    def _delay_required_column_checks(self):
-        self._required_columns_enabled = False
-        yield
-        self._required_columns_enabled = True
+        # For some operations, an empty time series needs to be created, then
+        # populated afterwards (to avoid issues with adding time columns).
         self._check_required_columns()
