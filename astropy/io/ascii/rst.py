@@ -44,14 +44,12 @@ class RST(FixedWidth):
         ==== ===== ======
           1    2.3  Hello
           2    4.5  Worlds
+
+    """reStructuredText simple format table.
+
+    Example::
+
         ==== ===== ======
-
-    Currently there is no support for reading tables which utilize continuation lines,
-    or for ones which define column spans through the use of an additional
-    line of dashes in the header.
-
-    """
-
     _format_name = "rst"
     _description = "reStructuredText simple table"
     data_class = SimpleRSTData
@@ -64,3 +62,9 @@ class RST(FixedWidth):
         lines = super().write(lines)
         lines = [lines[1]] + lines + [lines[1]]
         return lines
+        lines = [lines[1]] + lines + [lines[1]]
+        return lines
+
+    def __init__(self):
+        super().__init__(delimiter_pad=None, bookend=False)
+
