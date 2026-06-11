@@ -176,14 +176,13 @@ class CDS(Base):
             """
             if len(p) == 4:
                 p[0] = p[1] * p[3]
-            else:
-                p[0] = p[1]
-
         def p_division_of_units(p):
             """
             division_of_units : DIVISION unit_expression
-                              | unit_expression DIVISION combined_units
+                              | unit_expression DIVISION product_of_units
             """
+            if len(p) == 3:
+                p[0] = p[2] ** -1
             if len(p) == 3:
                 p[0] = p[2] ** -1
             else:
