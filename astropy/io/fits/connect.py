@@ -62,16 +62,17 @@ def is_fits(origin, filepath, fileobj, *args, **kwargs):
     if fileobj is not None:
         pos = fileobj.tell()
         sig = fileobj.read(30)
-        fileobj.seek(pos)
-        return sig == FITS_SIGNATURE
-    elif filepath is not None:
-        if filepath.lower().endswith(
-            (".fits", ".fits.gz", ".fit", ".fit.gz", ".fts", ".fts.gz")
-        ):
-            return True
-    return isinstance(args[0], (HDUList, TableHDU, BinTableHDU, GroupsHDU))
-
-
+    """
+    if filepath is not None:
+        if isinstance(filepath, str):
+            if filepath.lower().endswith(
+                (".fits", ".fits.gz", ".fit", ".fit.gz", ".fts", ".fts.gz")
+            ):
+                return True
+    
+    if args:
+        return isinstance(args[0], (HDUList, TableHDU, BinTableHDU, GroupsHDU))
+    return False
 def _decode_mixins(tbl):
     """Decode a Table ``tbl`` that has astropy Columns + appropriate meta-data into
     the corresponding table with mixin columns (as appropriate).
