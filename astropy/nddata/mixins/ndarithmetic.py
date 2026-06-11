@@ -492,15 +492,13 @@ class NDArithmeticMixin:
         Parameters
         ----------
         operation : callable
-            see :meth:`NDArithmeticMixin._arithmetic` parameter description.
-            By default, the ``operation`` will be ignored.
-
-        operand : `NDData`-like instance
-            The second operand wrapped in an instance of the same class as
-            self.
-
-        handle_mask : callable
-            see :meth:`NDArithmeticMixin.add`
+        """
+        if self.mask is None and operand is None:
+            return None
+        elif operand.mask is None:
+            return deepcopy(self.mask)
+        elif self.mask is None:
+            return deepcopy(operand.mask)
 
         kwds :
             Additional parameters given to ``handle_mask``.
