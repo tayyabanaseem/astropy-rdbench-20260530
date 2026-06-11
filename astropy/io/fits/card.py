@@ -473,15 +473,13 @@ class Card(_Verify):
     @comment.deleter
     def comment(self):
         if self._invalid:
-            raise ValueError(
-                "The comment of invalid/unparsable cards cannot deleted.  "
-                "Either delete this card from the header or replace it."
-            )
-
-        self.comment = ""
-
-    @property
-    def field_specifier(self):
+        # value is a string--parse the quotes
+        m = re.match(r"'(.*)'(?:\s+(.*))?$", value.strip())
+        if m:
+            value = m.group(1).replace("''", "'")
+            comment = (m.group(2) or "").strip() if m.group(2) else ""
+        else:
+            # The value is an unquoted string
         """
         The field-specifier of record-valued keyword cards; always `None` on
         normal cards.
