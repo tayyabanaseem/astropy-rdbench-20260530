@@ -474,73 +474,58 @@ class NDArithmeticMixin:
             return result_uncert
 
         else:
-            # Both have uncertainties so just propagate.
-
-            # only supply the axis kwarg if one has been specified for a collapsing operation
-            axis_kwarg = dict(axis=kwds["axis"]) if "axis" in kwds else dict()
-            return self.uncertainty.propagate(
-                operation, operand, result, correlation, **axis_kwarg
-            )
-
-    def _arithmetic_mask(self, operation, operand, handle_mask, axis=None, **kwds):
-        """
-        Calculate the resulting mask.
-
-        This is implemented as the piecewise ``or`` operation if both have a
-        mask.
-
-        Parameters
-        ----------
-        operation : callable
-            see :meth:`NDArithmeticMixin._arithmetic` parameter description.
-            By default, the ``operation`` will be ignored.
-
-        operand : `NDData`-like instance
-            The second operand wrapped in an instance of the same class as
-            self.
-
-        handle_mask : callable
-            see :meth:`NDArithmeticMixin.add`
-
-        kwds :
-            Additional parameters given to ``handle_mask``.
-
-        Returns
-        -------
-        result_mask : any type
-            If only one mask was present this mask is returned.
-            If neither had a mask ``None`` is returned. Otherwise
-            ``handle_mask`` must create (and copy) the returned mask.
-        """
-        # If only one mask is present we need not bother about any type checks
-        if (
-            self.mask is None and operand is not None and operand.mask is None
-        ) or handle_mask is None:
-            return None
-        elif self.mask is None and operand is not None:
-            # Make a copy so there is no reference in the result.
-            return deepcopy(operand.mask)
-        elif operand is None:
-            return deepcopy(self.mask)
-        else:
-            # Now lets calculate the resulting mask (operation enforces copy)
-            return handle_mask(self.mask, operand.mask, **kwds)
-
-    def _arithmetic_wcs(self, operation, operand, compare_wcs, **kwds):
-        """
-        Calculate the resulting wcs.
-
-        There is actually no calculation involved but it is a good place to
-        compare wcs information of both operands. This is currently not working
-        properly with `~astropy.wcs.WCS` (which is the suggested class for
-        storing as wcs property) but it will not break it neither.
-
-        Parameters
-        ----------
-        operation : callable
-            see :meth:`NDArithmeticMixin._arithmetic` parameter description.
-            By default, the ``operation`` will be ignored.
-
+   Returns
+   -------
+   result : `~astropy.nddata.NDData`-like
+   The resulting dataset
+   Notes
+   -----
+   If a ``callable`` is used for ``mask``, ``wcs`` or ``meta`` the
+   callable must accept the corresponding attributes as first two
+   parameters. If the callable also needs additional parameters these can be
+   defined as ``kwargs`` and must start with ``"wcs_"`` (for wcs callable) or
+   ``"meta_"`` (for meta callable). This startstring is removed before the
+   callable is called.
+   ``"first_found"`` can also be abbreviated with ``"ff"``.
+   """
+   """
+   Mixin class to add arithmetic to an NDData object.
+   When subclassing, be sure to list the superclasses in the correct order
+   so that the subclass sees NDData as the main superclass. See
+   `~astropy.nddata.NDDataArray` for an example.
+   Notes
+   -----
+   This class only aims at covering the most common cases so there are certain
+   restrictions on the saved attributes::
+       - ``uncertainty`` : has to be something that has a `NDUncertainty`-like
+         interface for uncertainty propagation
+       - ``mask`` : has to be something that can be used by a bitwise ``or``
+         operation.
+       - ``wcs`` : has to implement a way of comparing with ``=`` to allow
+         the operation.
+   But there is a workaround that allows to disable handling a specific
+   attribute and to simply set the results attribute to ``None`` or to
+   copy the existing attribute (and neglecting the other).
+   For example for uncertainties not representing an `NDUncertainty`-like
+   interface you can alter the ``propagate_uncertainties`` parameter in
+   :meth:`NDArithmeticMixin.add`. ``None`` means that the result will have no
+   uncertainty, ``False`` means it takes the uncertainty of the first operand
+   (if this does not exist from the second operand) as the result's
+   uncertainty. This behavior is also explained in the docstring for the
+   different arithmetic operations.
+   Decomposing the units is not attempted, mainly due to the internal mechanics
+   of `~astropy.units.Quantity`, so the resulting data might have units like
+   ``km/m`` if you divided for example 100km by 5m. So this Mixin has adopted
+   this behavior.
+   Examples
+   --------
+   Using this Mixin with `~astropy.nddata.NDData`:
+       >>> from astropy.nddata import NDData, NDArithmeticMixin
+       >>> class NDDataWithMath(NDArithmeticMixin, NDData):
+   elif operand.mask is None:
+       return deepcopy(self.mask)
+   elif operand is None:
+       return deepcopy(self.mask)
         operand : `NDData` instance or subclass
             The second operand wrapped in an instance of the same class as
             self.
