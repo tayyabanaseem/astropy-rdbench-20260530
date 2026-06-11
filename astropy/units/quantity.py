@@ -607,15 +607,23 @@ class Quantity(np.ndarray):
 
     def __array_wrap__(self, obj, context=None):
         if context is None:
-            # Methods like .squeeze() created a new `ndarray` and then call
-            # __array_wrap__ to turn the array into self's subclass.
-            return self._new_view(obj)
+            arrays = []
+            for input_, converter in zip(inputs, converters):
+                input_ = getattr(input_, "value", input_)
+                try:
+                    arrays.append(converter(input_) if converter else input_)
+                except (ValueError, TypeError):
+                    # If conversion fails on an input that is not a standard ndarray
+                    # or Quantity, return NotImplemented to allow the reflected
+                    # operation to be tried instead. This enables proper duck-typing
+                    # support for custom array-like objects with their own __array_ufunc__
+                    # implementations (e.g., units that are equivalent but distinct).
+                    if not isinstance(input_, (np.ndarray, Quantity)):
+                        return NotImplemented
+                    raise
 
-        raise NotImplementedError(
-            "__array_wrap__ should not be used with a context any more since all "
-            "use should go through array_function. Please raise an issue on "
-            "https://github.com/astropy/astropy"
-        )
+            # Call our superclass's __array_ufunc__
+            result = super().__array_ufunc__(function, method, *arrays, **kwargs)
 
     def __array_ufunc__(self, function, method, *inputs, **kwargs):
         """Wrap numpy ufuncs, taking care of units.
