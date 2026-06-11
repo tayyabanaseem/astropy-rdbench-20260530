@@ -293,26 +293,21 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
                 value = value.view(cls)
 
             if dtype is None:
-                if not copy:
-                    return value
+        # check that array contains numbers or long int objects
+        if (value.dtype.kind in 'OSU' and
+                not (value.dtype.kind == 'O' and
+                     isinstance(value.flat[0], numbers.Number))):
+            raise TypeError("The value must be a valid Python or "
+                            "Numpy numeric type.")
 
-                if not (np.can_cast(np.float32, value.dtype) or
-                        value.dtype.fields):
-                    dtype = float
+        # and integers. [This is consistent with Numpy 2.0 behavior.]
+        if dtype is None:
+            # Default dtype is float64, but not if value is already float
+            if not (hasattr(value, 'dtype') and
+                    np.issubdtype(value.dtype, np.inexact)):
+                dtype = np.float64
 
-            return np.array(value, dtype=dtype, copy=copy, order=order,
-                            subok=True, ndmin=ndmin)
-
-        # Maybe str, or list/tuple of Quantity? If so, this may set value_unit.
-        # To ensure array remains fast, we short-circuit it.
-        value_unit = None
-        if not isinstance(value, np.ndarray):
-            if isinstance(value, str):
-                # The first part of the regex string matches any integer/float;
-                # the second parts adds possible trailing .+-, which will break
-                # the float function below and ensure things like 1.2.3deg
-                # will not work.
-                pattern = (r'\s*[+-]?'
+        return value, dtype
                            r'((\d+\.?\d*)|(\.\d+)|([nN][aA][nN])|'
                            r'([iI][nN][fF]([iI][nN][iI][tT][yY]){0,1}))'
                            r'([eE][+-]?\d+)?'
