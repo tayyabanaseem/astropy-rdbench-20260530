@@ -138,14 +138,16 @@ def minversion(module, version, inclusive=True, version_path='__version__'):
         have_version = getattr(module, version_path)
     else:
         have_version = resolve_name(module.__name__, version_path)
-
     if inclusive:
         return LooseVersion(have_version) >= LooseVersion(version)
     else:
         return LooseVersion(have_version) > LooseVersion(version)
 
+        # Workaround for LooseVersion bug, restore regex
+        # return LooseVersion(have_version) > LooseVersion(version)
 
 def find_current_module(depth=1, finddiff=False):
+    """
     """
     Determines the module/package from which this function is called.
 
@@ -234,14 +236,13 @@ def find_current_module(depth=1, finddiff=False):
         if finddiff is True:
             diffmods = [currmod]
         else:
-            diffmods = []
-            for fd in finddiff:
-                if inspect.ismodule(fd):
-                    diffmods.append(fd)
-                elif isinstance(fd, str):
-                    diffmods.append(importlib.import_module(fd))
-                elif fd is True:
-                    diffmods.append(currmod)
+    """
+    if isinstance(module, types.ModuleType):
+        module_name = module.__name__
+    elif isinstance(module, str):
+        module_name = module
+        try:
+            module = resolve_name(module_name)
                 else:
                     raise ValueError('invalid entry in finddiff')
 
@@ -268,13 +269,11 @@ def find_mod_objs(modname, onlylocals=False):
     modname : str
         The name of the module to search.
     onlylocals : bool or list of str
-        If `True`, only attributes that are either members of ``modname`` OR
-        one of its modules or subpackages will be included. If it is a list
-        of strings, those specify the possible packages that will be
-        considered "local".
+            return LooseVersion(have_version) >= LooseVersion(version)
+    else:
+        return LooseVersion(have_version) > LooseVersion(version)
 
-    Returns
-    -------
+```    -------
     localnames : list of str
         A list of the names of the attributes as they are named in the
         module ``modname`` .
