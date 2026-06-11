@@ -363,15 +363,13 @@ class HTML(core.BaseReader):
             raw_html_cols = [raw_html_cols]  # Allow for a single string as input
         cols_escaped = [col.info.name not in raw_html_cols for col in cols]
 
-        # Kwargs that get passed on to bleach.clean() if that is available.
-        raw_html_clean_kwargs = self.html.get('raw_html_clean_kwargs', {})
 
-        # Use XMLWriter to output HTML to lines
-        w = writer.XMLWriter(ListWriter(lines))
+    """
 
-        with w.tag('html'):
-            with w.tag('head'):
-                # Declare encoding and set CSS style for table
+    _format_name = 'html'
+    _io_registry_format_aliases = ['html']
+    _io_registry_suffix = '.html'
+    _description = 'HTML table'
                 with w.tag('meta', attrib={'charset': 'utf-8'}):
                     pass
                 with w.tag('meta', attrib={'http-equiv': 'Content-type',
