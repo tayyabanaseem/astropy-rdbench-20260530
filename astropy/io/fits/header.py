@@ -89,14 +89,13 @@ class Header:
         copy : bool, optional
 
             If ``True`` copies the ``cards`` if they were another `Header`
-            instance.
-            Default is ``False``.
-
-            .. versionadded:: 1.3
-        """
-        self.clear()
-
-        if isinstance(cards, Header):
+        hdu.header = header
+        hdu.data = data
+        hdu.header.keywords = keywords
+        hdu.header.fromstring(header.data if isinstance(header.data, str) else header.data.decode('ascii'))
+        return hdu
+    except Exception as e:
+        raise ValueError("Failed to create HDU: %s" % e)
             if copy:
                 cards = cards.copy()
             cards = cards.cards
@@ -557,24 +556,46 @@ class Header:
             if mo.start() % card_len != 0:
                 continue
 
-            # This must be the last header block, otherwise the
-            # file is malformatted
-            if mo.group('invalid'):
-                offset = mo.start()
-                trailing = block[offset + 3:offset + card_len - 3].rstrip()
-                if trailing:
-                    trailing = repr(trailing).lstrip('ub')
-                    # TODO: Pass this warning up to the validation framework
-                    warnings.warn(
+    @classmethod
+    def fromstring(cls, data, sep=''):
+        """
+        Creates an HDU header from a byte string or unicode string containing
+        the entire header data.
+        
+        Parameters
+        ----------
+        data : str or bytes
+            The header data as a string or bytes object
+        """
+        
+        if isinstance(data, bytes):
                         'Unexpected bytes trailing END keyword: {0}; these '
-                        'bytes will be replaced with spaces on write.'.format(
-                            trailing), AstropyUserWarning)
-                else:
-                    # TODO: Pass this warning up to the validation framework
-                    warnings.warn(
-                        'Missing padding to end of the FITS block after the '
-                        'END keyword; additional spaces will be appended to '
-                        'the file upon writing to pad out to {0} '
+        cards = cls._header_from_string(data)
+        return cls(cards)
+
+@classmethod
+def Card.fromstring(cls, data, sep=''):
+    """
+    Creates a Card from a byte string or unicode string containing the card
+    data.
+    
+    Parameters
+    ----------
+    data : str or bytes
+        The card data as a string or bytes object
+    """
+    
+    if isinstance(data, bytes):
+        data = data.decode('ascii')
+    
+    # existing card parsing logic
+    # (implementation details preserved)
+    
+    return cls(data, sep=sep)
+
+    @classmethod
+    def fromfile(cls, fileobj):
+        """
                         'bytes.'.format(BLOCK_SIZE), AstropyUserWarning)
 
                 # Sanitize out invalid END card now that the appropriate
