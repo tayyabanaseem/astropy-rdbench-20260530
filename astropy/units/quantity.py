@@ -293,14 +293,13 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
                 value = value.view(cls)
 
             if dtype is None:
-                if not copy:
-                    return value
+                value = np.asarray(value)
+                # but allow other exact integer and inexact types
+                if not (np.issubdtype(value.dtype, np.inexact) or
+                        np.can_cast(np.floating, value.dtype)):
+                    value = np.asarray(value, dtype=np.float64)
 
-                if not (np.can_cast(np.float32, value.dtype) or
-                        value.dtype.fields):
-                    dtype = float
-
-            return np.array(value, dtype=dtype, copy=copy, order=order,
+            # Apply the function and turn it back into a Quantity.
                             subok=True, ndmin=ndmin)
 
         # Maybe str, or list/tuple of Quantity? If so, this may set value_unit.
@@ -373,15 +372,13 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
             not (value.dtype.kind == 'O' and
                  isinstance(value.item(() if value.ndim == 0 else 0),
                             numbers.Number))):
-            raise TypeError("The value must be a valid Python or "
-                            "Numpy numeric type.")
+            value = np.asarray(value)
+            # but allow other exact integer and inexact types
+            if not (np.issubdtype(value.dtype, np.inexact) or
+                    np.can_cast(np.floating, value.dtype)):
+                value = np.asarray(value, dtype=np.float64)
 
-        # by default, cast any integer, boolean, etc., to float
-        if dtype is None and (not (np.can_cast(np.float32, value.dtype)
-                                   or value.dtype.fields)
-                              or value.dtype.kind == 'O'):
-            value = value.astype(float)
-
+        if unit is None:
         value = value.view(cls)
         value._set_unit(value_unit)
         if unit is value_unit:
