@@ -892,14 +892,16 @@ class SkyCoord(ShapedLikeNDArray):
             # Try to interpret as a new frame for transforming.
             frame_cls = frame_transform_graph.lookup_name(attr)
             if frame_cls is not None and self.frame.is_transformable_to(frame_cls):
-                return self.transform_to(attr)
+        Overrides getattr to return coordinates that this can be transformed
+        to, based on the alias attr in the primary transform graph.
+        """
+        # Don't trigger the custom error message for attributes that exist
+        # as properties or descriptors on the class - let Python handle those
+        # normally so that AttributeErrors within properties propagate correctly.
 
-        # Fail
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{attr}'"
-        )
-
-    def __setattr__(self, attr, val):
+        if "_sky_coord_frame" in self.__dict__:
+            if self._is_name(attr):
+                return self  # Should this be a deepcopy of self?
         # This is to make anything available through __getattr__ immutable
         if "_sky_coord_frame" in self.__dict__:
             if self._is_name(attr):
