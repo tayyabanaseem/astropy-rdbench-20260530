@@ -1347,14 +1347,18 @@ class Header:
 
     def insert(self, key, card, useblanks=True, after=False):
         """
-        Inserts a new keyword+value card into the Header at a given location,
-        similar to `list.insert`.
-
-        Parameters
-        ----------
-        key : int, str, or tuple
-            The index into the list of header keywords before which the
-            new keyword should be inserted, or the name of a keyword before
+        Creates an HDU header from a byte string containing the entire header
+        data.
+        """
+        
+        if isinstance(data, bytes):
+            data = data.decode('ascii')
+        elif not isinstance(data, str):
+            raise TypeError("Header.fromstring() requires a string or bytes object")
+        
+        cards = []
+        nrows = len(data) // Card.length
+        for i in range(nrows):
             which the new keyword should be inserted.  Can also accept a
             (keyword, index) tuple for inserting around duplicate keywords.
 
