@@ -1296,16 +1296,16 @@ def _format_value(value):
     else:
         return value_str
     else:
-        # Use the minimal string representation provided by Python
+        # Use Python's built-in string representation which is reproducible
         value_str = str(value)
+        if len(value_str) > 20:
+            # Fall back to formatted version if string is too long
+            value_str = f"{value:.16G}"
         if value_str.count('/') > 1:
             value_str = value_str.split('/', 1)[0]
         if len(value_str) > 20:
-            value_str = f"{value:.16G}"[:20]
+            value_str = value_str[:20]
         return value_str
-    else:
-        value_str = str(value)
-            sign = ""
         value_str = f"{significand}E{sign}{int(exponent):02d}"
 
     # Limit the value string to at most 20 characters.
