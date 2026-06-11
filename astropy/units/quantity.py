@@ -584,13 +584,29 @@ class Quantity(np.ndarray):
     def __array_finalize__(self, obj):
         # Check whether super().__array_finalize should be called
         # (sadly, ndarray.__array_finalize__ is None; we cannot be sure
-        # what is above us).
-        super_array_finalize = super().__array_finalize__
-        if super_array_finalize is not None:
-            super_array_finalize(obj)
-
-        # If we're a new object or viewing an ndarray, nothing has to be done.
-        if obj is None or obj.__class__ is np.ndarray:
+        # inputs to that unit, and the unit of the output
+        out = kwargs.get('out', None)
+        
+        # Early check: if inputs are not recognized types, return NotImplemented
+        # This allows duck types to use reflected operators
+        from astropy.table import Column
+        
+        def _is_recognized_type(obj):
+            return isinstance(obj, (Quantity, np.ndarray, Column)) or obj is None
+        
+        # Check all inputs - if any unrecognized type, let it handle the operation
+        if not all(_is_recognized_type(inp) for inp in inputs):
+            return NotImplemented
+        
+        # Check output arguments if provided
+        if out is not None:
+            out_args = out if isinstance(out, tuple) else (out,)
+            if not all(_is_recognized_type(o) for o in out_args):
+                return NotImplemented
+        
+        # Determine the units of the output, and the required unit conversions
+        # for inputs.
+        try:
             return
 
         # If our unit is not set and obj has a valid one, use it.
@@ -614,18 +630,16 @@ class Quantity(np.ndarray):
         raise NotImplementedError(
             "__array_wrap__ should not be used with a context any more since all "
             "use should go through array_function. Please raise an issue on "
-            "https://github.com/astropy/astropy"
-        )
-
-    def __array_ufunc__(self, function, method, *inputs, **kwargs):
-        """Wrap numpy ufuncs, taking care of units.
-
-        Parameters
-        ----------
-        function : callable
-            ufunc to wrap.
-        method : str
-            Ufunc method: ``__call__``, ``at``, ``reduce``, etc.
+                arrays.append(converter(input_) if converter else input_)
+        except (TypeError, UnitConversionError, ValueError) as err:
+            # Return NotImplemented for unit conversion errors or value errors
+            # from _condition_arg when dealing with unrecognized types.
+            # This allows the other operand's reflected method to be tried.
+            if isinstance(err, (UnitConversionError, ValueError)):
+                return NotImplemented
+            # For TypeErrors that aren't about conversion, re-raise
+            raise
+        except AttributeError:
         inputs : tuple
             Input arrays.
         kwargs : keyword arguments
