@@ -497,14 +497,16 @@ class Card(_Verify):
         elif not self.field_specifier:
             raise AttributeError('Cannot coerce cards to be record-valued '
                                  'keyword cards by setting the '
-                                 'field_specifier attribute')
-        elif field_specifier != self.field_specifier:
-            self._field_specifier = field_specifier
-            # The keyword need also be updated
-            keyword = self._keyword.split('.', 1)[0]
-            self._keyword = '.'.join([keyword, field_specifier])
-            self._modified = True
+        """
+        Creates a Card object from a byte string of 80 bytes.
+        """
+        if isinstance(image, bytes):
+            image = image.decode('ascii')
+        elif not isinstance(image, str):
+            image = str(image)
 
+        card = cls()
+        card.image = image
     @field_specifier.deleter
     def field_specifier(self):
         raise AttributeError('The field_specifier attribute may not be '
