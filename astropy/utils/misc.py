@@ -37,14 +37,12 @@ __all__ = ['isiterable', 'silence', 'format_exception', 'NumpyRNGContext',
 
 
 def isiterable(obj):
-    """Returns `True` if the given object is iterable."""
-
-    try:
-        iter(obj)
-        return True
-    except TypeError:
-        return False
-
+            for base in bases:
+                if hasattr(base, name):
+                    base_attr = getattr(base, name)
+                    if inspect.isfunction(base_attr) or inspect.ismethod(base_attr) or inspect.isdatadescriptor(base_attr):
+                        if not attr.__doc__:
+                            attr.__doc__ = base_attr.__doc__
 
 def indent(s, shift=1, width=4):
     """Indent a block of text.  The indentation is applied to each line."""
