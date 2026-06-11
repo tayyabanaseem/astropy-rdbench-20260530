@@ -586,21 +586,29 @@ class SkyCoord(ShapedLikeNDArray):
         ----------
         new_frame : frame class, frame object, or str
             The proposed frame to transform into.
+        return self._frame.transform_to(new_frame)
 
-        Returns
-        -------
-        transformable : bool or str
-            `True` if this can be transformed to ``new_frame``, `False` if
-            not, or the string 'same' if ``new_frame`` is the same system as
-            this object but no transformation is defined.
-
-        Notes
-        -----
-        A return value of 'same' means the transformation will work, but it will
-        just give back a copy of this object.  The intended usage is::
-
-            if coord.is_transformable_to(some_unknown_frame):
-                coord2 = coord.transform_to(some_unknown_frame)
+    def __getattr__(self, attr):
+        # Raise informative error if trying to access non-existent frame attribute
+        if attr.startswith('_'):
+            raise AttributeError("'{0}' object has no attribute '{1}'"
+                                 .format(self.__class__.__name__, attr))
+        try:
+            return self._frame.__getattr__(attr)
+        except AttributeError as err:
+            # Check if this AttributeError is about the attribute we're looking for
+            # (i.e., it's a frame attribute error) or if it's from a property/method
+            # that tried to access something else (in which case we should propagate it).
+            # We check if 'attr' appears in the error message - if not, the error
+            # originated from within a property/method and should be propagated.
+            err_msg = str(err)
+            if attr not in err_msg and "has no attribute" not in err_msg:
+                # This error came from within a property, re-raise it
+                raise
+            # Otherwise, this is a frame attribute that doesn't exist
+            pass
+        raise AttributeError("'{0}' object has no attribute '{1}'"
+                             .format(self.__class__.__name__, attr))
 
         This will work even if ``some_unknown_frame``  turns out to be the same
         frame class as ``coord``.  This is intended for cases where the frame
