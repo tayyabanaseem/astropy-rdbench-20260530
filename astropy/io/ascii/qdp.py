@@ -142,41 +142,38 @@ def _get_lines_from_file(qdp_file):
         lines = qdp_file
     else:
         raise ValueError("invalid value of qdb_file")
+        if line.startswith(b"!"):
+            continue
 
-    return lines
+        if re.match(r"read\s", line, re.IGNORECASE):
+            data_table_id = _read_table_id(line, data_table_id)
+            continue
 
-
-def _interpret_err_lines(err_specs, ncols, names=None):
-    """Give list of column names from the READ SERR and TERR commands.
-
-    Parameters
     ----------
     err_specs : dict
         ``{'serr': [n0, n1, ...], 'terr': [n2, n3, ...]}``
         Error specifications for symmetric and two-sided errors
     ncols : int
         Number of data columns
+            else:
+                raise ValueError(f"Unrecognized table id: {data_table_id}")
 
-    Other Parameters
-    ----------------
-    names : list of str
-        Name of data columns (defaults to ['col1', 'col2', ...]), _not_
-        including error columns.
+        if re.match(r"skip", line, re.IGNORECASE):
+            skip_lines += 1
+            continue
 
-    Returns
-    -------
-    colnames : list
-        List containing the column names. Error columns will have the name
-        of the main column plus ``_err`` for symmetric errors, and ``_perr``
-        and ``_nerr`` for positive and negative errors respectively
+        if re.match(r"serr", line, re.IGNORECASE):
+            _read_serr_lines(line, tables_dict, input_colnames)
+            continue
 
-    Examples
-    --------
-    >>> col_in = ['MJD', 'Rate']
-    >>> cols = _interpret_err_lines(None, 2, names=col_in)
-    >>> cols[0]
-    'MJD'
-    >>> err_specs = {'terr': [1], 'serr': [2]}
+        if re.match(r"terr", line, re.IGNORECASE):
+            _read_terr_lines(line, tables_dict, input_colnames)
+            continue
+
+        if re.match(r"nerr", line, re.IGNORECASE):
+            _read_nerr_lines(line, tables_dict, input_colnames)
+            continue
+
     >>> ncols = 5
     >>> cols = _interpret_err_lines(err_specs, ncols, names=col_in)
     >>> cols[0]
