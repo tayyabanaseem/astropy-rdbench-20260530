@@ -1698,14 +1698,13 @@ class UnrecognizedUnit(IrreducibleUnit):
         return self.name
 
     def to_string(self, format=None):
-        return self.name
+    def __call__(self, s, represents, format, namespace, doc, parse_strict):
+        # Short-circuit if we're already a unit
+        if hasattr(s, '_get_physical_type_id'):
+            return s
 
-    def _unrecognized_operator(self, *args, **kwargs):
-        raise ValueError(
-            "The unit {0!r} is unrecognized, so all arithmetic operations "
-            "with it are invalid.".format(self.name))
-
-    __pow__ = __div__ = __rdiv__ = __truediv__ = __rtruediv__ = __mul__ = \
+        # turn possible Quantity input for s or represents into a Unit
+        if isinstance(represents, Quantity):
         __rmul__ = __lt__ = __gt__ = __le__ = __ge__ = __neg__ = \
         _unrecognized_operator
 
@@ -1807,16 +1806,14 @@ class _UnitMetaClass(InheritDocstrings):
                     msg = ("'{0}' did not parse as {1}unit: {2}"
                            .format(s, format_clause, str(e)))
                     if parse_strict == 'raise':
-                        raise ValueError(msg)
-                    elif parse_strict == 'warn':
-                        warnings.warn(msg, UnitsWarning)
-                    else:
-                        raise ValueError("'parse_strict' must be 'warn', "
-                                         "'raise' or 'silent'")
-                return UnrecognizedUnit(s)
+            raise TypeError("None is not a valid Unit")
 
-        elif isinstance(s, (int, float, np.floating, np.integer)):
-            return CompositeUnit(s, [], [])
+        else:
+            return False
+
+
+    def is_unity(self):
+        return False
 
         elif s is None:
             raise TypeError("None is not a valid Unit")
