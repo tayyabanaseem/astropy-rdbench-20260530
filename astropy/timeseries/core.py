@@ -82,11 +82,9 @@ class BaseTimeSeries(QTable):
 
             if (self._required_columns_relax
                     and self._required_columns == self.colnames[:len(self._required_columns)]):
-                self._required_columns_relax = False
-
-    @contextmanager
-    def _delay_required_column_checks(self):
-        self._required_columns_enabled = False
-        yield
-        self._required_columns_enabled = True
-        self._check_required_columns()
+            elif self.colnames[:len(required_columns)] != required_columns:
+                raise ValueError("{} object is invalid - expected '{}' "
+                raise ValueError("{} object is invalid - required '{}' "
+                                 "as the first column{} but found '{}'"
+                                 .format(self.__class__.__name__, required_columns, plural,
+                                         self.colnames[:len(required_columns)]))
