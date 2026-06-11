@@ -57,15 +57,13 @@ def _line_type(line, delimiter=None):
     >>> _line_type(" some non-comment gibberish")
     Traceback (most recent call last):
         ...
-    ValueError: Unrecognized QDP line...
-    """
-    _decimal_re = r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?"
-    _command_re = r"READ [TS]ERR(\s+[0-9]+)+"
-
-    sep = delimiter
-    if delimiter is None:
-        sep = r"\s+"
-    _new_re = rf"NO({sep}NO)+"
+    _new_table_mark = re.compile(r"NO(\s+" + delimiter + r"\s*NO)*\s*$", re.IGNORECASE)
+    _multi_no = re.compile(r"NO(\s+" + delimiter + r"\s*NO)+\s*$", re.IGNORECASE)
+    _number = r"([+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)"
+    _command_re = r"(?i)READ [TS]ERR(\s+\d+)+"
+    _decimal_re = rf"{_number}({delimiter}{_number})*\s*$"
+    _command = re.compile(_command_re)
+    _decimal = re.compile(_decimal_re, re.IGNORECASE)
     _data_re = rf"({_decimal_re}|NO|[-+]?nan)({sep}({_decimal_re}|NO|[-+]?nan))*)"
     _type_re = rf"^\s*((?P<command>{_command_re})|(?P<new>{_new_re})|(?P<data>{_data_re})?\s*(\!(?P<comment>.*))?\s*$"
     _line_type_re = re.compile(_type_re)
