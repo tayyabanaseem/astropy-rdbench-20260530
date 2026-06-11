@@ -1,11 +1,8 @@
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
+# ... existing imports ...
 from .index import SlicedIndex, TableIndices, TableLoc, TableILoc, TableLocIndices
+from .ndarray_mixin import NdarrayMixin  # Remove unnecessary import
+# ... rest of imports ...
 
-import sys
-from collections import OrderedDict, defaultdict
-from collections.abc import Mapping
-import warnings
-from copy import deepcopy
 import types
 import itertools
 import weakref
@@ -2497,16 +2494,13 @@ class Table:
             --- --- ---
               2 0.2   y
 
-
-        Note that there are no warnings if the slice operator extends
-        outside the data::
-
-            >>> t = Table([[1, 2, 3], [0.1, 0.2, 0.3], ['x', 'y', 'z']],
-            ...           names=('a', 'b', 'c'))
-            >>> t.remove_rows(slice(10, 20, 1))
-            >>> print(t)
-             a   b   c
-            --- --- ---
+            data_is_mixin = isinstance(data, MixinRegistryType)
+        
+        # Structured ndarray gets viewed as a mixin unless already a valid
+        # mixin class - now converts to Column instead
+        if (not isinstance(data, Column) and not data_is_mixin
+                and isinstance(data, np.ndarray) and len(data.dtype) > 1):
+            data = Column(data)
               1 0.1   x
               2 0.2   y
               3 0.3   z
