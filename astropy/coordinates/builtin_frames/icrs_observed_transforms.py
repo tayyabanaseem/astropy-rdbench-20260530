@@ -1,9 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""
-Contains the transformation functions for getting to "observed" systems from ICRS.
-"""
-import erfa
 
+from astropy import units as u
+from astropy.coordinates.baseframe import frame_transform_graph
+from astropy.coordinates.transformations import FunctionTransformWithFiniteDifference
 from astropy import units as u
 from astropy.coordinates.builtin_frames.utils import atciqz, aticq
 from astropy.coordinates.baseframe import frame_transform_graph
@@ -18,66 +17,75 @@ from .hadec import HADec
 from .utils import PIOVER2
 from ..erfa_astrom import erfa_astrom
 
-
-@frame_transform_graph.transform(FunctionTransformWithFiniteDifference, ICRS, AltAz)
-@frame_transform_graph.transform(FunctionTransformWithFiniteDifference, ICRS, HADec)
-def icrs_to_observed(icrs_coo, observed_frame):
-    # if the data are UnitSphericalRepresentation, we can skip the distance calculations
+def itrs_to_observed_mat(observed_frame):
+    """
+    Form the transformation matrix from ITRS to observed frame (AltAz or HADec).
     is_unitspherical = (isinstance(icrs_coo.data, UnitSphericalRepresentation) or
                         icrs_coo.cartesian.x.unit == u.one)
-    # first set up the astrometry context for ICRS<->observed
-    astrom = erfa_astrom.get().apco(observed_frame)
+    lon, lat, height = observed_frame.location.to_geodetic('WGS84')
+    elong = lon.to_value(u.radian)
 
-    # correct for parallax to find BCRS direction from observer (as in erfa.pmpx)
-    if is_unitspherical:
-        srepr = icrs_coo.spherical
-    else:
-        observer_icrs = CartesianRepresentation(astrom['eb'], unit=u.au, xyz_axis=-1, copy=False)
-        srepr = (icrs_coo.cartesian - observer_icrs).represent_as(
-            SphericalRepresentation)
-
-    # convert to topocentric CIRS
-    cirs_ra, cirs_dec = atciqz(srepr, astrom)
-
-    # now perform observed conversion
     if isinstance(observed_frame, AltAz):
-        lon, zen, _, _, _ = erfa.atioq(cirs_ra, cirs_dec, astrom)
-        lat = PIOVER2 - zen
+        # form ITRS to AltAz matrix
+        elat = lat.to_value(u.radian)
+        # AltAz frame is left handed
+        minus_x = np.eye(3)
+        minus_x[0][0] = -1.0
+        mat = (minus_x
+               @ rotation_matrix(PIOVER2 - elat, 'y', unit=u.radian)
+               @ rotation_matrix(elong, 'z', unit=u.radian))
     else:
-        _, _, lon, lat, _ = erfa.atioq(cirs_ra, cirs_dec, astrom)
+        # form ITRS to HADec matrix
+        # HADec frame is left handed
+        minus_y = np.eye(3)
+        minus_y[1][1] = -1.0
+        mat = (minus_y
+               @ rotation_matrix(elong, 'z', unit=u.radian))
 
-    if is_unitspherical:
-        obs_srepr = UnitSphericalRepresentation(lon << u.radian, lat << u.radian, copy=False)
-    else:
-        obs_srepr = SphericalRepresentation(lon << u.radian, lat << u.radian, srepr.distance, copy=False)
-    return observed_frame.realize_frame(obs_srepr)
+    return mat
 
 
-@frame_transform_graph.transform(FunctionTransformWithFiniteDifference, AltAz, ICRS)
-@frame_transform_graph.transform(FunctionTransformWithFiniteDifference, HADec, ICRS)
-def observed_to_icrs(observed_coo, icrs_frame):
-    # if the data are UnitSphericalRepresentation, we can skip the distance calculations
-    is_unitspherical = (isinstance(observed_coo.data, UnitSphericalRepresentation) or
-                        observed_coo.cartesian.x.unit == u.one)
+@frame_transform_graph.transform(FunctionTransformWithFiniteDifference, ITRS, AltAz)
+@frame_transform_graph.transform(FunctionTransformWithFiniteDifference, ITRS, HADec)
+def itrs_to_observed(itrs_coo, observed_frame):
+    """
+    Transform from ITRS to observed frame (AltAz or HADec).
 
-    usrepr = observed_coo.represent_as(UnitSphericalRepresentation)
-    lon = usrepr.lon.to_value(u.radian)
-    lat = usrepr.lat.to_value(u.radian)
+    This transformation stays within ITRS and does not adjust obstime.
+    ITRS coordinates are treated as time-invariant for objects on Earth.
+    """
+    # Trying to synchronize the obstimes here makes no sense. In fact,
+    # it's a real gotcha as doing an ITRS->ITRS transform references 
+    # ITRS coordinates, which should be tied to the Earth, to the SSB.
+    # Instead, we treat ITRS coordinates as time invariant here.
 
-    if isinstance(observed_coo, AltAz):
-        # the 'A' indicates zen/az inputs
-        coord_type = 'A'
-        lat = PIOVER2 - lat
-    else:
-        coord_type = 'H'
+    # form the Topocentric ITRS position
+    topocentric_itrs_repr = (itrs_coo.cartesian
+                             - observed_frame.location.get_itrs().cartesian)
+    rep = topocentric_itrs_repr.transform(itrs_to_observed_mat(observed_frame))
+    return observed_frame.realize_frame(rep)
 
-    # first set up the astrometry context for ICRS<->CIRS at the observed_coo time
-    astrom = erfa_astrom.get().apco(observed_coo)
 
-    # Topocentric CIRS
-    cirs_ra, cirs_dec = erfa.atoiq(coord_type, lon, lat, astrom) << u.radian
-    if is_unitspherical:
-        srepr = SphericalRepresentation(cirs_ra, cirs_dec, 1, copy=False)
+@frame_transform_graph.transform(FunctionTransformWithFiniteDifference, AltAz, ITRS)
+@frame_transform_graph.transform(FunctionTransformWithFiniteDifference, HADec, ITRS)
+def observed_to_itrs(observed_coo, itrs_frame):
+    """
+    Transform from observed frame (AltAz or HADec) to ITRS.
+
+    This transformation stays within ITRS and does not adjust obstime.
+    ITRS coordinates are treated as time-invariant for objects on Earth.
+    """
+    # Trying to synchronize the obstimes here makes no sense. In fact,
+    # it's a real gotcha as doing an ITRS->ITRS transform references 
+    # ITRS coordinates, which should be tied to the Earth, to the SSB.
+    # Instead, we treat ITRS coordinates as time invariant here.
+
+    # form the Topocentric ITRS position
+    topocentric_itrs_repr = observed_coo.cartesian.transform(matrix_transpose(
+                            itrs_to_observed_mat(observed_coo)))
+    # form the Geocentric ITRS position
+    rep = topocentric_itrs_repr + observed_coo.location.get_itrs().cartesian
+    return itrs_frame.realize_frame(rep)
     else:
         srepr = SphericalRepresentation(lon=cirs_ra, lat=cirs_dec,
                                         distance=observed_coo.distance, copy=False)
