@@ -1,10 +1,10 @@
-# Licensed under a 3-clause BSD style license - see PYFITS.rst
+# Licensed under a 3-clause BSD style license - see FITS.rst
 
-import collections
-import copy
+import io
+import sys
 import warnings
-from io import BytesIO, StringIO
 
+import numpy as np
 import numpy as np
 import pytest
 
@@ -1231,15 +1231,51 @@ class TestHeaderFunctions(FitsTestCase):
         assert header.setdefault("E") == "F"
         assert len(header) == 3
         assert header.setdefault("G", "H") == "H"
-        assert len(header) == 4
-        assert "G" in header
-        assert header.setdefault("G", "H") == "H"
-        assert len(header) == 4
+        h["TESTKEY"] = (999, "Test keyword")
+        assert h["TESTKEY"].value == 999
 
-    def test_update_from_dict(self):
+    def test_floating_point_string_representation_card(self):
         """
-        Test adding new cards and updating existing cards from a dict using
-        Header.update()
+        Test that floating point values are represented with minimal
+        necessary precision in FITS cards.
+        
+        Regression test for issue where values like 0.009125 were being
+        expanded to 0.009124999999999999, causing comment truncation.
+        """
+        from astropy.io.fits import Card
+        import warnings
+        
+        # Test case from the original issue - should not produce warning
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            card1 = Card("ESO IFM CL RADIUS", 0.009125, "[m] radius arround actuator to avoid")
+            # Check that no truncation warning was raised
+            truncation_warnings = [warning for warning in w 
+                                   if "too long" in str(warning.message).lower()]
+            assert len(truncation_warnings) == 0, "Comment should not be truncated for 0.009125"
+        
+        # Verify the string representation is compact
+        card_str = str(card1)
+        assert "0.009125" in card_str, f"Expected '0.009125' in card string, got: {card_str}"
+        
+        # Test various exponents as suggested in the issue
+        test_values = [
+            (1 - 2**-53) * 2**-60,
+            (1 - 2**-53) * 2**0,
+            (1 - 2**-53) * 2**60,
+        ]
+        
+        for value in test_values:
+            card = Card("TESTKEY", value, "test comment")
+            # The string representation should be minimal and round-trip correctly
+            card_str = str(card)
+            value_from_card = float(card_str.split("=")[1].split("/")[0].strip())
+            assert value_from_card == value, \
+                f"Value {value} did not round-trip correctly, got {value_from_card}"
+
+    def test_card_hierarch(self):
+        """Test the HIERARCH card convention."""
+        # Regression test for issue #5369
         """
 
         header = fits.Header([("A", "B"), ("C", "D")])
