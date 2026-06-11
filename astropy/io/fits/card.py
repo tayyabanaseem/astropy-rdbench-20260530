@@ -830,26 +830,24 @@ class Card(_Verify):
         """
         Split the card image between the keyword and the rest of the card.
         """
-        if self._image is not None:
-            # If we already have a card image, don't try to rebuild a new card
-            # image, which self.image would do
-            image = self._image
+                if not m:
+                    return kw, vc
+
+                value = m.group("strg") or ""
+                value = value.rstrip()
+                if value and value[-1] == "&":
+                    value = value[:-1]
+                values.append(value)
+                comment = m.group("comm")
+                if comment:
+                    comments.append(comment.rstrip())
+
+        if keyword in self._commentary_keywords:
+            valuecomment = "".join(values)
         else:
-            image = self.image
-
-        # Split cards with CONTINUE cards or commentary keywords with long
-        # values
-        if len(self._image) > self.length:
-            values = []
-            comments = []
-            keyword = None
-            for card in self._itersubcards():
-                kw, vc = card._split()
-                if keyword is None:
-                    keyword = kw
-
-                if keyword in self._commentary_keywords:
-                    values.append(vc)
+            # CONTINUE card
+            valuecomment = f"'{''.join(values).replace(chr(39)*2, chr(39))}' / {' '.join(comments)}"
+        return keyword, valuecomment
                     continue
 
                 # Should match a string followed by a comment; if not it
