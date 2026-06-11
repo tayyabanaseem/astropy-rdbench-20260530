@@ -63,3 +63,31 @@ class NdarrayMixin(np.ndarray):
         nd_state, own_state = state
         super().__setstate__(nd_state)
         self.__dict__.update(own_state)
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+
+        if callable(super().__array_finalize__):
+            super().__array_finalize__(obj)
+
+        # pickle NdArrayMixin objects (ndarray subclasses), see
+        # http://www.mail-archive.com/numpy-discussion@scipy.org/msg02446.html
+
+        def __reduce__(self):
+            # patch to pickle NdArrayMixin objects (ndarray subclasses), see
+            # http://www.mail-archive.com/numpy-discussion@scipy.org/msg02446.html
+           # http://www.mail-archive.com/numpy-discussion@scipy.org/msg02446.html
+
+
+        # patch to unpickle NdarrayMixin objects (ndarray subclasses), see
+        # http://www.mail-archive.com/numpy-discussion@scipy.org/msg02446.html
+
+        def __setstate__(self, state):
+            # patch to unpickle NdarrayMixin objects (ndarray subclasses), see
+            # http://www.mail-archive.com/numpy-discussion@scipy.org/msg02446.html
+            nd_state, own_state = state
+            super().__setstate__(nd_state)
+            self.__dict__.update(own_state)
+
+```
