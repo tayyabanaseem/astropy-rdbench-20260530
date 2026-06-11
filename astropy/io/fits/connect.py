@@ -68,14 +68,12 @@ def is_fits(origin, filepath, fileobj, *args, **kwargs):
         if filepath.lower().endswith(
             (".fits", ".fits.gz", ".fit", ".fit.gz", ".fts", ".fts.gz")
         ):
-            return True
-    return isinstance(args[0], (HDUList, TableHDU, BinTableHDU, GroupsHDU))
-
-
-def _decode_mixins(tbl):
-    """Decode a Table ``tbl`` that has astropy Columns + appropriate meta-data into
-    the corresponding table with mixin columns (as appropriate).
+    origin : str or readable file-like
+        Path or file object containing a potential FITS file.
     """
+    if fileobj is not None:
+        pos = fileobj.tell()
+        sig = fileobj.read(30)
     # If available read in __serialized_columns__ meta info which is stored
     # in FITS COMMENTS between two sentinels.
     try:
@@ -130,17 +128,11 @@ def read_table_fits(
 ):
     """
     Read a Table object from an FITS file.
-
-    If the ``astropy_native`` argument is ``True``, then input FITS columns
-    which are representations of an astropy core object will be converted to
-    that class and stored in the ``Table`` as "mixin columns".  Currently this
-    is limited to FITS columns which adhere to the FITS Time standard, in which
-    case they will be converted to a `~astropy.time.Time` column in the output
-    table.
-
-    Parameters
-    ----------
-    input : str or file-like or compatible `astropy.io.fits` HDU object
+        return isinstance(args[0], (HDUList, TableHDU, BinTableHDU, GroupsHDU))
+    def _decode_mixins(tbl):
+        """Decode a Table ``tbl`` that has astropy Columns + appropriate meta-data into
+        the corresponding table with mixin columns (as appropriate).
+        """
         If a string, the filename to read the table from. If a file object, or
         a compatible HDU object, the object to extract the table from. The
         following `astropy.io.fits` HDU objects can be used as input:
