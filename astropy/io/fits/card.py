@@ -1292,25 +1292,23 @@ def _format_value(value):
         return f"{val_str:>20}"
 
     elif isinstance(value, Undefined):
-        return ""
-    else:
-        return ""
-
-
-def _format_float(value):
-    """Format a floating number to make sure it gets the decimal point."""
-    value_str = f"{value:.16G}"
-    if "." not in value_str and "E" not in value_str:
-        value_str += ".0"
-    elif "E" in value_str:
-        # On some Windows builds of Python (and possibly other platforms?) the
-        # exponent is zero-padded out to, it seems, three digits.  Normalize
-        # the format to pad only to two digits.
-        significand, exponent = value_str.split("E")
-        if exponent[0] in ("+", "-"):
-            sign = exponent[0]
-            exponent = exponent[1:]
-        else:
+ """Format a floating point number to make sure it gets the decimal point."""
+ # Use Python's str() for the shortest round-trip representation first.
+ value_str = str(value)
+ if "E" not in value_str.upper() and "." not in value_str:
+ value_str += ".0"
+ if len(value_str) > 20:
+ # Fall back to 16 significant digits if str() representation is too long
+ value_str = f"{value:.16G}"
+ if "." not in value_str and "E" not in value_str:
+ value_str += ".0"
+ if "E" in value_str.upper():
+ # Convert the exponent to E notation (not e) and ensure it has at
+ # least 2 digits in the exponent (per the FITS standard)
+ value_str = value_str.replace("e", "E")
+ if re.match(r".*E[+-]\d$", value_str):
+ value_str = value_str[:-1] + "0" + value_str[-1]
+ return value_str
             sign = ""
         value_str = f"{significand}E{sign}{int(exponent):02d}"
 
