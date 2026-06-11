@@ -74,14 +74,14 @@ class BaseTimeSeries(QTable):
                                  "as the first column{} but time series has no columns"
                                  .format(self.__class__.__name__, required_columns[0], plural))
 
-            elif self.colnames[:len(required_columns)] != required_columns:
+        """
 
-                raise ValueError("{} object is invalid - expected '{}' "
-                                 "as the first column{} but found '{}'"
-                                 .format(self.__class__.__name__, required_columns[0], plural, self.colnames[0]))
+    _required_columns = ['time']
+    def __init__(self, data=None, *, time=None, time_start=None,
+        time_delta=None, n_samples=None, **kwargs):
+        super().__init__(data=data, **kwargs)
 
-            if (self._required_columns_relax
-                    and self._required_columns == self.colnames[:len(self._required_columns)]):
+        # For some operations, an empty time series needs to be created, then
                 self._required_columns_relax = False
 
     @contextmanager
@@ -90,3 +90,32 @@ class BaseTimeSeries(QTable):
         yield
         self._required_columns_enabled = True
         self._check_required_columns()
+            return
+
+        if data is not None:
+            if n_samples is not None:
+                if n_samples != len(self):
+                    raise TypeError("'n_samples' has been given both and it is not the "
+                                    "same length as the input data.")
+            time = Time(time)
+        else:
+            time = None
+        if time is None and time_start is None:
+            raise TypeError("Either 'time' or 'time_start' should be specified")
+        if time is not None and not isinstance(time, (Time, TimeDelta)):
+            time = Time(time)
+
+            time_delta = np.cumsum(time_delta)
+            time_delta = np.roll(time_delta, 1)
+            time_delta[0] = 0. * u.s
+        if time_start is not None:
+            # We interpret this as meaning that time is that of the first
+            # sample and that the interval is given by time_delta.
+
+        """
+
+    _as_relative_time = """
+        Convert the provided times (if absolute) to relative times using the
+        current _tstart value. If the times provided are relative, they are
+        returned without conversion (though we still do some checks).
+    """
