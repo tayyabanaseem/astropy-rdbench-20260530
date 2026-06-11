@@ -592,14 +592,33 @@ class SkyCoord(ShapedLikeNDArray):
         transformable : bool or str
             `True` if this can be transformed to ``new_frame``, `False` if
             not, or the string 'same' if ``new_frame`` is the same system as
-            this object but no transformation is defined.
+        Overrides getattr to return coordinates that this can be transformed
+        to, based on the alias attr in the primary transform graph.
+        """
+        # If the attribute exists as a class-level descriptor (e.g., a property)
+        # on this class or a subclass, it means __getattr__ was called because the
+        # descriptor raised an AttributeError. We should re-raise that original
+        # error rather than masking it with a misleading message about the property
+        # not existing. Check before any other logic to catch these cases early.
+        for cls in type(self).__mro__:
+            if attr in cls.__dict__:
+                descriptor = cls.__dict__[attr]
+                # Check if it's a descriptor that could raise AttributeError
+                # (property, cached_property, or other descriptors)
+                if isinstance(descriptor, (property, classmethod, staticmethod)):
+                    raise AttributeError(
+                        f"Error in property '{attr}' of '{type(self).__name__}' "
+                        f"(see above for details)"
+                    )
+                # For other descriptors with __get__, also assume they raised
+                if hasattr(descriptor, '__get__'):
+                    raise AttributeError(
+                        f"Error in descriptor '{attr}' of '{type(self).__name__}' "
+                        f"(see above for details)"
+                    )
 
-        Notes
-        -----
-        A return value of 'same' means the transformation will work, but it will
-        just give back a copy of this object.  The intended usage is::
-
-            if coord.is_transformable_to(some_unknown_frame):
+        if "_sky_coord_frame" in self.__dict__:
+            if self._is_name(attr):
                 coord2 = coord.transform_to(some_unknown_frame)
 
         This will work even if ``some_unknown_frame``  turns out to be the same
