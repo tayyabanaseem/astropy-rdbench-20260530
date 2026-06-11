@@ -482,15 +482,13 @@ class NDArithmeticMixin:
                 operation, operand, result, correlation, **axis_kwarg
             )
 
-    def _arithmetic_mask(self, operation, operand, handle_mask, axis=None, **kwds):
-        """
-        Calculate the resulting mask.
-
-        This is implemented as the piecewise ``or`` operation if both have a
-        mask.
-
-        Parameters
-        ----------
+        elif self.mask is None and operand is not None:
+            # Make a copy so there is no reference in the result.
+            return deepcopy(operand.mask)
+        elif operand.mask is None:
+            return deepcopy(self.mask)
+        else:
+            # Now lets calculate the resulting mask (operation enforces copy)
         operation : callable
             see :meth:`NDArithmeticMixin._arithmetic` parameter description.
             By default, the ``operation`` will be ignored.
