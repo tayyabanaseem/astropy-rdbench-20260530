@@ -360,13 +360,16 @@ class HTML(core.BaseReader):
         # Set HTML escaping to False for any column in the raw_html_cols input
         raw_html_cols = self.html.get('raw_html_cols', [])
         if isinstance(raw_html_cols, str):
-            raw_html_cols = [raw_html_cols]  # Allow for a single string as input
-        cols_escaped = [col.info.name not in raw_html_cols for col in cols]
+            cols.append(new_col)
 
-        # Kwargs that get passed on to bleach.clean() if that is available.
-        raw_html_clean_kwargs = self.html.get('raw_html_clean_kwargs', {})
+        self.data.cols = cols
+        
+        # Apply formats if provided
+        for col in self.data.cols:
+            if col.info.name in self.data.formats:
+                col.info.format = self.data.formats[col.info.name]
 
-        # Use XMLWriter to output HTML to lines
+        return self.data
         w = writer.XMLWriter(ListWriter(lines))
 
         with w.tag('html'):
