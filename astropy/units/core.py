@@ -1695,11 +1695,12 @@ class UnrecognizedUnit(IrreducibleUnit):
         return self.name.encode('ascii', 'replace')
 
     def __str__(self):
-        return self.name
-
-    def to_string(self, format=None):
-        return self.name
-
+    def __eq__(self, other):
+        if other is None:
+            return False
+        
+        other = Unit(other, parse_strict='silent')
+        return isinstance(other, UnrecognizedUnit) and self.name == other.name
     def _unrecognized_operator(self, *args, **kwargs):
         raise ValueError(
             "The unit {0!r} is unrecognized, so all arithmetic operations "
