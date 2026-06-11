@@ -537,21 +537,20 @@ class Card(_Verify):
             # string representation of a blank card
             return self._image == BLANK_CARD
 
-        # If the keyword, value, and comment are all empty (for self.value
-        # explicitly check that it is a string value, since a blank value is
-        # returned as '')
-        return (not self.keyword and
-                (isinstance(self.value, str) and not self.value) and
-                not self.comment)
-
     @classmethod
     def fromstring(cls, image):
         """
-        Construct a `Card` object from a (raw) string. It will pad the string
+        Construct a `Card` object from a (raw) string or bytes. It will pad the string
         if it is not the length of a card image (80 columns).  If the card
         image is longer than 80 columns, assume it contains ``CONTINUE``
         card(s).
         """
+        card = cls()
+        if isinstance(image, bytes):
+            image = image.decode('ascii')
+        card._image = _pad(image)
+        card._verified = False
+        return card
 
         card = cls()
         card._image = _pad(image)
