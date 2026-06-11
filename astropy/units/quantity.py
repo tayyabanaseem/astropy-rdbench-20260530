@@ -607,12 +607,19 @@ class Quantity(np.ndarray):
 
     def __array_wrap__(self, obj, context=None):
         if context is None:
-            # Methods like .squeeze() created a new `ndarray` and then call
-            # __array_wrap__ to turn the array into self's subclass.
-            return self._new_view(obj)
-
-        raise NotImplementedError(
-            "__array_wrap__ should not be used with a context any more since all "
+            arrays = []
+            for input_, converter in zip(inputs, converters):
+                input_ = getattr(input_, "value", input_)
+                try:
+                    arrays.append(converter(input_) if converter else input_)
+                except (ValueError, TypeError):
+                    # If the input is not a recognized ndarray subclass or Quantity,
+                    # return NotImplemented to allow the other operand's __array_ufunc__
+                    # to handle it (e.g., for duck arrays).
+                    if not isinstance(input_, (np.ndarray, Quantity)):
+                        return NotImplemented
+                    raise
+```            "__array_wrap__ should not be used with a context any more since all "
             "use should go through array_function. Please raise an issue on "
             "https://github.com/astropy/astropy"
         )
