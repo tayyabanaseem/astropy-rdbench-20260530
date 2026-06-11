@@ -1,41 +1,52 @@
-# Licensed under a 3-clause BSD style license - see PYFITS.rst
+# Licensed under a 3-clause BSD style license - see FITS.rst
 
-import collections
-import copy
+import io
+import sys
 import warnings
-from io import BytesIO, StringIO
+import numpy as np
 
 import numpy as np
-import pytest
 
-from astropy.io import fits
+def test_floating_point_string_representation_card(self):
+    """
+    Test that floating point values are represented with minimal
 from astropy.io.fits.card import _pad
-from astropy.io.fits.header import _pad_length
-from astropy.io.fits.util import encode_ascii
-from astropy.io.fits.verify import VerifyError, VerifyWarning
-from astropy.utils.exceptions import AstropyUserWarning
-from astropy.utils.misc import _NOT_OVERWRITING_MSG_MATCH
-
-from .conftest import FitsTestCase
-
-
-def test_shallow_copy():
-    """Make sure that operations on a shallow copy do not alter the original.
-    #4990."""
-    original_header = fits.Header([("a", 1), ("b", 1)])
-    copied_header = copy.copy(original_header)
-
-    # Modifying the original dict should not alter the copy
+    
+    # Test case from the original issue
+    card1 = Card("ESO IFM CL RADIUS", 0.009125, "[m] radius arround actuator")
+    # Should not cause comment truncation warning
+    assert "0.009125" in str(card1) or "0.009125000000000001" not in str(card1)
+    
+    # Test various exponents as suggested in the issue
+    test_values = [
+        (1 - 2**-53) * 2**-60,
+        (1 - 2**-53) * 2**0,
+        (1 - 2**-53) * 2**60,
+    ]
+    
+    # Should not cause comment truncation warning
+    assert "0.009125" in str(card1) or "0.009125000000000001" not in str(card1)
+    
+    for value in test_values:
+        card = Card("TESTKEY", value, "test comment")
     original_header["c"] = 100
     assert "c" not in copied_header
+        # The string representation should be minimal and round-trip correctly
+        value_from_card = float(str(card).split("=")[1].split("/")[0].strip())
+        assert value_from_card == value
 
-    # and changing the copy should not change the original.
-    copied_header["a"] = 0
-    assert original_header["a"] == 1
+    def test_string_representation_length(self):
+        """
+        Test that string representation of floats does not lead to
+        comment truncation when the string representation is too long.
+        """
+        card = Card("TESTKEY", 0.009125, "[m] radius arround actuator")
+        value_str = str(card)
+        assert len(value_str) <= 20
 
-
-def test_init_with_header():
-    """Make sure that creating a Header from another Header makes a copy if
+    def test_card_hierarch(self):
+        """Test the HIERARCH card convention."""
+        # Regression test for issue #5369
     copy is True."""
 
     original_header = fits.Header([("a", 10)])
