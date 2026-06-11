@@ -586,22 +586,49 @@ class SkyCoord(ShapedLikeNDArray):
         ----------
         new_frame : frame class, frame object, or str
             The proposed frame to transform into.
+        return self._frame.transform_to(new_frame)
 
-        Returns
-        -------
-        transformable : bool or str
-            `True` if this can be transformed to ``new_frame``, `False` if
-            not, or the string 'same' if ``new_frame`` is the same system as
-            this object but no transformation is defined.
+    def __getattr__(self, attr):
+        # Raise informative error if trying to access non-existent frame attribute
+        # But first, try to get from the frame to provide better error messages
+        # for properties that reference non-existent attributes
+        if attr.startswith('_'):
+            raise AttributeError("'{0}' object has no attribute '{1}'"
+                                  .format(self.__class__.__name__, attr))
+        try:
+            return self._frame.__getattr__(attr)
+        except AttributeError as err:
+            # If the attribute name in the error message matches what we're looking for,
+            # it's a frame attribute that doesn't exist. Otherwise, it's an error from
+            # within a property getter, which we should propagate.
+            if attr in str(err):
+                pass
+            else:
+                raise
+        raise AttributeError("'{0}' object has no attribute '{1}'"
+                                 .format(self.__class__.__name__, attr))
 
-        Notes
-        -----
-        A return value of 'same' means the transformation will work, but it will
-        just give back a copy of this object.  The intended usage is::
-
-            if coord.is_transformable_to(some_unknown_frame):
-                coord2 = coord.transform_to(some_unknown_frame)
-
+    def __setattr__(self, attr, value):
+        # Check if this is a property or descriptor that might raise AttributeError
+        # We need to let those AttributeErrors propagate properly
+        # But first, try to get from the frame to provide better error messages
+        # for properties that reference non-existent attributes
+        if attr not in ('_frame', '_apply_diffattr'):
+            # Check if attr exists as a property in the class hierarchy
+            for cls in type(self).__mro__:
+                if attr in cls.__dict__:
+                    descriptor = cls.__dict__[attr]
+                    # If it's a property or has __set__, use normal attribute setting
+                    if isinstance(descriptor, property) or hasattr(descriptor, '__set__'):
+                        try:
+                            object.__setattr__(self, attr, value)
+                            return
+                        except AttributeError:
+                            raise
+        # Handle frame and apply_diffattr specially
+        if attr in ('_frame', '_apply_diffattr'):
+            object.__setattr__(self, attr, value)
+            return
         This will work even if ``some_unknown_frame``  turns out to be the same
         frame class as ``coord``.  This is intended for cases where the frame
         is the same regardless of the frame attributes (e.g. ICRS), but be
