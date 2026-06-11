@@ -220,12 +220,32 @@ class QuantityInput:
             # Call the original function with any equivalencies in force.
             with add_enabled_equivalencies(self.equivalencies):
                 return_ = wrapped_function(*func_args, **func_kwargs)
-            if wrapped_signature.return_annotation is not inspect.Signature.empty:
-                return return_.to(wrapped_signature.return_annotation)
-            else:
-                return return_
+    return return_.to(wrapped_signature.return_annotation)
 
-        return wrapper
+AttributeError: 'NoneType' object has no attribute 'to'
 
-
+    if not isinstance(return_, Unit):
+        raise TypeError("Expected Unit object as return "
+                         "annotation, but got {0}".format(type(return_)))
 quantity_input = QuantityInput.as_decorator
+
+    for param in wrapped_signature.parameters.values():
+        if param.kind in (inspect.Parameter.VAR_KEYWORD,
+                        inspect.Parameter.VAR_KEYWORD):
+            continue
+
+        if param.name not in bound_args.arguments and param.default is not param.empty:
+            if arg is None and param.default is None:
+                continue
+
+        return_ = wrapped_function(*func_args, **func_kwargs)
+        if wrapped_signature.return_annotation is not inspect.Signature.empty:
+            return return_.to(wrapped_signature.return_annotation)
+        else:
+    func = make_function_with_signature(func, name=name, **wrapped_args)
+    File "/usr/lib64/python3.6/site-packages/astropy/units/decorators.py", line 225, in wrapper
+    return return_.to(wrapped_signature.return_annotation)
+
+    if not isinstance(return_, Unit):
+        raise TypeError("Expected Unit object as return "
+                         "annotation, but got {0}".format(type(return_)))
