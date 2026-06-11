@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""Functions related to Python runtime introspection."""
-
-
+"""Utilities for introspection."""
+import re
 import inspect
+from operator import ge, gt
+from types import ModuleType
 import types
 import importlib
 from distutils.version import LooseVersion
@@ -144,16 +144,31 @@ def minversion(module, version, inclusive=True, version_path='__version__'):
     else:
         return LooseVersion(have_version) > LooseVersion(version)
 
+        else:
+            raise
 
-def find_current_module(depth=1, finddiff=False):
-    """
-    Determines the module/package from which this function is called.
+    # Normalize version strings to avoid LooseVersion bug with dev versions
+    # See https://bugs.python.org/issue30272
+    # Extract only the numeric portion (e.g., "1.14.3" from "1.14.3dev")
+    version_regex = re.compile(r'^(\d+(?:\.\d+)*)')
+    
+    def get_numeric_version(v):
+        """Extract numeric version part to work around LooseVersion comparison bugs.
+        
+        This strips pre-release identifiers like 'dev', 'alpha', 'beta', etc.
+        that can cause TypeError when comparing versions like '1.14.3' vs '1.14dev'.
+        """
+        match = version_regex.match(str(v))
+        return match.group(1) if match else str(v)
+    
+    comp = ge if inclusive else gt
+    return comp(
+        Version(get_numeric_version(module_version)),
+        Version(get_numeric_version(version))
+    )
 
-    This function has two modes, determined by the ``finddiff`` option. it
-    will either simply go the requested number of frames up the call
-    stack (if ``finddiff`` is False), or it will go up the call stack until
-    it reaches a module that is *not* in a specified set.
 
+def find_mod_objs(mod, include_names=None, exclude_names=None):
     Parameters
     ----------
     depth : int
