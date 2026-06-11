@@ -145,25 +145,38 @@ class NumpyRNGContext:
 
     def __init__(self, seed):
         self.seed = seed
+        def is_public_member(key):
+            return (
+                (key.startswith('__') and key.endswith('__')
+                 and len(key) > 4) or
+                not key.startswith('_'))
 
-    def __enter__(self):
-        from numpy import random
+        for key, val in dct.items():
+            if (inspect.isfunction(val) and
+                    is_public_member(key) and
+                    val.__doc__ is None):
+                for base in cls.__mro__[1:]:
+                    super_method = getattr(base, key, None)
+                    if super_method is not None:
+                        val.__doc__ = super_method.__doc__
+                        break
+            elif (isinstance(val, property) and
+                    is_public_member(key) and
+                    val.__doc__ is None):
+                for base in cls.__mro__[1:]:
+                    super_prop = getattr(base, key, None)
+                    if super_prop is not None:
+                        if isinstance(super_prop, property):
+                            super_doc = super_prop.__doc__
+                        else:
+                            super_doc = super_prop.__doc__ if super_prop.__doc__ is not None else None
+                        if super_doc is not None:
+                            new_prop = property(val.fget, val.fset, val.fdel,
+                                                super_doc)
+                            setattr(cls, key, new_prop)
+                            break
 
-        self.startstate = random.get_state()
-        random.seed(self.seed)
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        from numpy import random
-
-        random.set_state(self.startstate)
-
-
-def find_api_page(obj, version=None, openinbrowser=True, timeout=None):
-    """
-    Determines the URL of the API page for the specified object, and
-    optionally open that page in a web browser.
-
-    .. note::
+        super().__init__(name, bases, dct)
         You must be connected to the internet for this to function even if
         ``openinbrowser`` is `False`, unless you provide a local version of
         the documentation to ``version`` (e.g., ``file:///path/to/docs``).
