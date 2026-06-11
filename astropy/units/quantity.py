@@ -293,16 +293,14 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
                 value = value.view(cls)
 
             if dtype is None:
-        # check that array contains numbers or long int objects
-        if (value.dtype.kind in 'OSU' and
-                not (value.dtype.kind == 'O' and
-                     isinstance(value.flat[0], numbers.Number))):
-            raise TypeError("The value must be a valid Python or "
-                            "Numpy numeric type.")
+        # We need to decide on a default dtype: if the input is a Python float,
+        # use float64; if it is an integer, use float64; but if it is already
+        # a float array, keep that dtype.
+        if not (hasattr(value, 'dtype') and
+                np.issubdtype(value.dtype, np.inexact)):
+            dtype = np.float64
 
-        # and integers. [This is consistent with Numpy 2.0 behavior.]
-        if dtype is None:
-            # Default dtype is float64, but not if value is already float
+        return value, dtype
             if not (hasattr(value, 'dtype') and
                     np.issubdtype(value.dtype, np.inexact)):
                 dtype = np.float64
