@@ -587,13 +587,27 @@ class Quantity(np.ndarray):
         # what is above us).
         super_array_finalize = super().__array_finalize__
         if super_array_finalize is not None:
-            super_array_finalize(obj)
-
-        # If we're a new object or viewing an ndarray, nothing has to be done.
-        if obj is None or obj.__class__ is np.ndarray:
-            return
-
-        # If our unit is not set and obj has a valid one, use it.
+        # Check for output argument
+        out = kwargs.get('out', None)
+        
+        # Check if all inputs and outputs are recognized types (Quantity, ndarray, or Column)
+        # If not, return NotImplemented to allow other types to handle the operation
+        from astropy.table import Column
+        
+        def _is_valid_type(obj):
+            return isinstance(obj, (Quantity, np.ndarray, Column)) or obj is None
+        
+        # Check inputs
+        if not all(_is_valid_type(inp) for inp in inputs):
+            return NotImplemented
+        
+        # Check outputs if provided
+        if out is not None and not all(_is_valid_type(o) for o in (out if isinstance(out, tuple) else (out,))):
+            return NotImplemented
+        
+        # Determine the units of the output, and the required unit conversions
+        # for inputs.
+        try:
         if self._unit is None:
             unit = getattr(obj, "_unit", None)
             if unit is not None:
@@ -617,16 +631,15 @@ class Quantity(np.ndarray):
             "https://github.com/astropy/astropy"
         )
 
-    def __array_ufunc__(self, function, method, *inputs, **kwargs):
-        """Wrap numpy ufuncs, taking care of units.
-
-        Parameters
-        ----------
-        function : callable
-            ufunc to wrap.
-        method : str
-            Ufunc method: ``__call__``, ``at``, ``reduce``, etc.
-        inputs : tuple
+                arrays.append(converter(input_) if converter else input_)
+        except (TypeError, UnitConversionError) as err:
+            return NotImplemented
+        except ValueError:
+            # Raised by _condition_arg for unrecognized types
+            return NotImplemented
+            raise
+        except AttributeError:
+            raise
             Input arrays.
         kwargs : keyword arguments
             As passed on, with ``out`` containing possible quantity output.
