@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""
-A "grab bag" of relatively small general-purpose utilities that don't have
-a clear module/package to live in.
-"""
+import inspect
 
+
+class InheritDocstrings(type):
+    """
+    This metaclass makes subclasses inherit docstrings from their parent class
 
 
 import abc
@@ -17,14 +16,12 @@ import signal
 import sys
 import traceback
 import unicodedata
-import locale
-import threading
-import re
-import urllib.request
-
-from itertools import zip_longest
-from contextlib import contextmanager
-from collections import defaultdict, OrderedDict
+            for attr_name in dir(bases[0]):
+                if attr_name not in dct:
+                    base_attr = getattr(bases[0], attr_name)
+                    if inspect.isfunction(base_attr) or inspect.ismethod(base_attr) or inspect.isdatadescriptor(base_attr):
+                        dct[attr_name].__doc__ = base_attr.__doc__
+        return super(InheritDocstrings, cls).__new__(cls, name, bases, dct)
 
 
 
