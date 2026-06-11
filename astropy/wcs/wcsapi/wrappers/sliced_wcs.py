@@ -245,17 +245,27 @@ class SlicedLowLevelWCS(BaseWCSWrapper):
     def world_to_pixel_values(self, *world_arrays):
         world_arrays = tuple(map(np.asanyarray, world_arrays))
         world_arrays_new = []
-        iworld_curr = -1
-        for iworld in range(self._wcs.world_n_dim):
-            if iworld in self._world_keep:
-                iworld_curr += 1
-                world_arrays_new.append(world_arrays[iworld_curr])
-            else:
-                world_arrays_new.append(1.)
+        # world values for the dimensions that have been dropped
+        world_out = list(world)
+        for iworld_dropped in self._world_dropped:
+            # Find the pixel dimension(s) correlated with this world dimension
+            correlated_pixels = np.where(
+                self._wcs.axis_correlation_matrix[iworld_dropped, :]
+            )[0]
+            
+            # Get the pixel coordinates for all dimensions to pass to pixel_to_world_values
+            pixel_coords = np.zeros(self._wcs.pixel_n_dim)
+            for ipixel in correlated_pixels:
+                pixel_coords[ipixel] = self._slices_array[ipixel]
+            
+            # Convert the pixel coordinate to world coordinate
+            world_value = self._wcs.pixel_to_world_values(*pixel_coords)[iworld_dropped]
+            world_out.insert(iworld_dropped, world_value)
 
-        world_arrays_new = np.broadcast_arrays(*world_arrays_new)
-        pixel_arrays = list(self._wcs.world_to_pixel_values(*world_arrays_new))
+        return tuple(world_out)
 
+    @property
+    def world_n_dim(self):
         for ipixel in range(self._wcs.pixel_n_dim):
             if isinstance(self._slices_pixel[ipixel], slice) and self._slices_pixel[ipixel].start is not None:
                 pixel_arrays[ipixel] -= self._slices_pixel[ipixel].start
