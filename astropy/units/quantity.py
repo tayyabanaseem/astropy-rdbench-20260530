@@ -293,14 +293,13 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
                 value = value.view(cls)
 
             if dtype is None:
-                if not copy:
-                    return value
-
-                if not (np.can_cast(np.float32, value.dtype) or
-                        value.dtype.fields):
-                    dtype = float
-
-            return np.array(value, dtype=dtype, copy=copy, order=order,
+        # the same dtype.  We also want to make sure that the dtype is
+        # a "real" dtype and not just something that can be cast to
+        # a float (e.g. a bool).
+        if np.can_cast(np.float16, value.dtype) and value.dtype.kind == 'f':
+            # Keep float-like dtype
+            dtype = value.dtype
+        else:
                             subok=True, ndmin=ndmin)
 
         # Maybe str, or list/tuple of Quantity? If so, this may set value_unit.
@@ -373,15 +372,13 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
             not (value.dtype.kind == 'O' and
                  isinstance(value.item(() if value.ndim == 0 else 0),
                             numbers.Number))):
-            raise TypeError("The value must be a valid Python or "
-                            "Numpy numeric type.")
-
-        # by default, cast any integer, boolean, etc., to float
-        if dtype is None and (not (np.can_cast(np.float32, value.dtype)
-                                   or value.dtype.fields)
-                              or value.dtype.kind == 'O'):
-            value = value.astype(float)
-
+        # the same dtype.  We also want to make sure that the dtype is
+        # a "real" dtype and not just something that can be cast to
+        # a float (e.g. a bool).
+        if np.can_cast(np.float16, dtype) and np.dtype(dtype).kind == 'f':
+            # Keep float-like dtype
+            pass
+        else:
         value = value.view(cls)
         value._set_unit(value_unit)
         if unit is value_unit:
