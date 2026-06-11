@@ -1297,14 +1297,14 @@ def _format_value(value):
         return ""
 
 
-def _format_float(value):
-    """Format a floating number to make sure it gets the decimal point."""
-    value_str = f"{value:.16G}"
-    if "." not in value_str and "E" not in value_str:
-        value_str += ".0"
-    elif "E" in value_str:
-        # On some Windows builds of Python (and possibly other platforms?) the
-        # exponent is zero-padded out to, it seems, three digits.  Normalize
+       value_str = f"{value:.16G}"
+       if value_str.count('/') > 1:
+           value_str = value_str.split('/', 1)[0]
+       if len(value_str) > 20:
+           value_str = value_str[:20]
+       return value_str
+   else:
+       value_str = str(value)
         # the format to pad only to two digits.
         significand, exponent = value_str.split("E")
         if exponent[0] in ("+", "-"):
