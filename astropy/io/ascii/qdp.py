@@ -67,24 +67,21 @@ def _line_type(line, delimiter=None):
         sep = r"\s+"
     _new_re = rf"NO({sep}NO)+"
     _data_re = rf"({_decimal_re}|NO|[-+]?nan)({sep}({_decimal_re}|NO|[-+]?nan))*)"
-    _type_re = rf"^\s*((?P<command>{_command_re})|(?P<new>{_new_re})|(?P<data>{_data_re})?\s*(\!(?P<comment>.*))?\s*$"
-    _line_type_re = re.compile(_type_re)
-    line = line.strip()
-    if not line:
-        return "comment"
-    match = _line_type_re.match(line)
-
-    if match is None:
-        raise ValueError(f"Unrecognized QDP line: {line}")
-    for type_, val in match.groupdict().items():
-        if val is None:
-            continue
-        if type_ == "data":
-            return f"data,{len(val.split(sep=delimiter))}"
-        else:
-            return type_
-
-
+    -------
+    type : str
+        Line type: "comment", "command", or "data"
+    """
+    if re.match(r"^\s*(READ|SKIP|NO|YES)\s", line, re.IGNORECASE):
+        return "command"
+    
+    _data_re = re.compile(r"^\s*[0-9]")
+    
+    # Check if it's a data line
+    _decimal_re = r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?"
+    if re.match(r"^\s*[0-9]", line, re.IGNORECASE):
+        return "data,1"
+    
+    return "comment"
 def _get_type_from_list_of_lines(lines, delimiter=None):
     """Read through the list of QDP file lines and label each line by type.
 
