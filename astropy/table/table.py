@@ -1248,22 +1248,12 @@ class Table:
 
         # Get the final column name using precedence.  Some objects may not
         # have an info attribute. Also avoid creating info as a side effect.
-        if not name:
-            if isinstance(data, Column):
-                name = data.name or default_name
-            elif 'info' in getattr(data, '__dict__', ()):
-                name = data.info.name or default_name
-            else:
-                name = default_name
-
-        if isinstance(data, Column):
-            # If self.ColumnClass is a subclass of col, then "upgrade" to ColumnClass,
-            # otherwise just use the original class.  The most common case is a
-            # table with masked=True and ColumnClass=MaskedColumn.  Then a Column
-            # gets upgraded to MaskedColumn, but the converse (pre-4.0) behavior
-            # of downgrading from MaskedColumn to Column (for non-masked table)
-            # does not happen.
-            col_cls = self._get_col_cls_for_table(data)
+            if handler := get_mixin_handler(data):
+                original_data = data
+                data = handler(data)
+        if isinstance(data, dict):
+            data = self._init_from_dict(data)
+            return
 
         elif data_is_mixin:
             # Copy the mixin column attributes if they exist since the copy below
