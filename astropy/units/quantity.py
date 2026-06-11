@@ -296,13 +296,17 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
                 if not copy:
                     return value
 
-                if not (np.can_cast(np.float32, value.dtype) or
-                        value.dtype.fields):
-                    dtype = float
+        # Apply the function and turn it back into a Quantity.
+        result = function(*args, **kwargs)
+        return self._result_as_quantity(result, unit, out)
 
-            return np.array(value, dtype=dtype, copy=copy, order=order,
-                            subok=True, ndmin=ndmin)
+    if NUMPY_LT_1_17:
+        def clip(self, a_min, a_max, out=None):
+            return self._wrap_function(np.clip, self._to_own_unit(a_min),
+                                       self._to_own_unit(a_max), out=out)
 
+    def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
+        return self._wrap_function(np.trace, offset, axis1, axis2, dtype,
         # Maybe str, or list/tuple of Quantity? If so, this may set value_unit.
         # To ensure array remains fast, we short-circuit it.
         value_unit = None
@@ -338,14 +342,59 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
                   all(isinstance(v, Quantity) for v in value)):
                 # Convert all quantities to the same unit.
                 if unit is None:
-                    unit = value[0].unit
-                value = [q.to_value(unit) for q in value]
-                value_unit = unit  # signal below that conversion has been done
+        return self._wrap_function(np.nansum, axis,
+                                   out=out, keepdims=False)
 
-        if value_unit is None:
-            # If the value has a `unit` attribute and if not None
-            # (for Columns with uninitialized unit), treat it like a quantity.
-            value_unit = getattr(value, 'unit', None)
+    def insert(self, obj, values, axis=None):
+        """
+        Insert values along the given axis before the given indices and return
+        a new `~astropy.units.Quantity` object.
+
+        This is a thin wrapper around the `numpy.insert` function.
+
+        Parameters
+        ----------
+        obj : int, slice or sequence of ints
+            Object that defines the index or indices before which ``values`` is
+            inserted.
+        values : array-like
+            Values to insert.  If the type of ``values`` is different
+            from that of quantity, ``values`` is converted to the matching type.
+            ``values`` should be shaped so that it can be broadcast appropriately
+            The unit of ``values`` must be consistent with this quantity.
+        axis : int, optional
+            Axis along which to insert ``values``.  If ``axis`` is None then
+            the quantity array is flattened before insertion.
+
+        Returns
+        -------
+        out : `~astropy.units.Quantity`
+            A copy of quantity with ``values`` inserted.  Note that the
+            insertion does not occur in-place: a new quantity array is returned.
+
+        Examples
+        --------
+        >>> import astropy.units as u
+        q = [1, 2] * u.m
+        q.insert(0, 50 * u.cm)
+        <Quantity [ 0.5,  1.,  2.] m>
+
+        >>> q = [[1, 2], [3, 4]] * u.m
+        >>> q.insert(1, [10, 20] * u.m, axis=0)
+        <Quantity [[  1.,  2.],
+                   [ 10., 20.],
+                   [  3.,  4.]] m>
+
+        >>> q.insert(1, 10 * u.m, axis=1)
+        <Quantity [[  1., 10.,  2.],
+                   [  3., 10.,  4.]] m>
+
+        """
+        out_array = np.insert(self.value, obj, self._to_own_unit(values), axis)
+        return self._new_view(out_array)
+
+
+class SpecificTypeQuantity(Quantity):
             if value_unit is None:
                 # Default to dimensionless for no (initialized) unit attribute.
                 if unit is None:
@@ -408,13 +457,14 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
         if 'info' in obj.__dict__:
             self.info = obj.info
 
-    def __array_wrap__(self, obj, context=None):
+        return self._wrap_function(np.mean, axis,
+                                   dtype, out=out)
 
-        if context is None:
-            # Methods like .squeeze() created a new `ndarray` and then call
-            # __array_wrap__ to turn the array into self's subclass.
-            return self._new_view(obj)
+    def round(self, decimals=0, out=None):
+        return self._wrap_function(np.round, decimals, out=out)
 
+    def dot(self, b, out=None):
+        result_unit = self.unit * getattr(b, 'unit', dimensionless_unscaled)
         raise NotImplementedError('__array_wrap__ should not be used '
                                   'with a context any more, since we require '
                                   'numpy >=1.13.  Please raise an issue on '
@@ -438,29 +488,33 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
         -------
         result : `~astropy.units.Quantity`
             Results of the ufunc, with the unit set properly.
-        """
-        # Determine required conversion functions -- to bring the unit of the
-        # input to that expected (e.g., radian for np.sin), or to get
-        # consistent units between two inputs (e.g., in np.add) --
-        # and the unit of the result (or tuple of units for nout > 1).
-        converters, unit = converters_and_unit(function, method, *inputs)
 
-        out = kwargs.get('out', None)
-        # Avoid loop back by turning any Quantity output into array views.
-        if out is not None:
+    def all(self, axis=None, out=None):
+        raise NotImplementedError("cannot evaluate truth value of quantities. "
+                                  "Evaluate array with q.value.all(...)")
+
+    def any(self, axis=None, out=None):
+        raise NotImplementedError("cannot evaluate truth value of quantities. "
+                                  "Evaluate array with q.value.any(...)")
+
+    # Calculation: numpy functions that can be overridden with methods.
+
             # If pre-allocated output is used, check it is suitable.
             # This also returns array view, to ensure we don't loop back.
             if function.nout == 1:
                 out = out[0]
             out_array = check_output(out, unit, inputs, function=function)
             # Ensure output argument remains a tuple.
-            kwargs['out'] = (out_array,) if function.nout == 1 else out_array
 
-        # Same for inputs, but here also convert if necessary.
-        arrays = []
-        for input_, converter in zip(inputs, converters):
-            input_ = getattr(input_, 'value', input_)
-            arrays.append(converter(input_) if converter else input_)
+    def ediff1d(self, to_end=None, to_begin=None):
+        return self._wrap_function(np.ediff1d, to_end, to_begin)
+
+    def nansum(self, axis=None, out=None, keepdims=False):
+        return self._wrap_function(np.nansum, axis,
+                                   out=out, keepdims=keepdims)
+
+    def insert(self, obj, values, axis=None):
+        """
 
         # Call our superclass's __array_ufunc__
         result = super().__array_ufunc__(function, method, *arrays, **kwargs)
@@ -695,14 +749,59 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
             set globally or within a context.
 
         Returns
-        -------
-        value : `~numpy.ndarray` or scalar
-            The value in the units specified. For arrays, this will be a view
-            of the data if no unit conversion was necessary.
+                ufunc)
 
-        See also
+
+    def insert(self, obj, values, axis=None):
+        """
+        Insert values along the given axis before the given indices and return
+        a new `~astropy.units.Quantity` object.
+
+        This is a thin wrapper around the `numpy.insert` function.
+
+        Parameters
+        ----------
+        obj : int, slice or sequence of ints
+            Object that defines the index or indices before which ``values`` is
+            inserted.
+        values : array-like
+            Values to insert.  If the type of ``values`` is different
+            from that of quantity, ``values`` is converted to the matching type.
+            ``values`` should be shaped so that it can be broadcast appropriately
+            The unit of ``values`` must be consistent with this quantity.
+        axis : int, optional
+            Axis along which to insert ``values``.  If ``axis`` is None then
+            the quantity array is flattened before insertion.
+
+        Returns
+        -------
+        out : `~astropy.units.Quantity`
+            A copy of quantity with ``values`` inserted.  Note that the
+            insertion does not occur in-place: a new quantity array is returned.
+
+        Examples
         --------
-        to : Get a new instance in a different unit.
+        >>> import astropy.units as u
+        q = [1, 2] * u.m
+        q.insert(0, 50 * u.cm)
+        <Quantity [ 0.5,  1.,  2.] m>
+
+        >>> q = [[1, 2], [3, 4]] * u.m
+        >>> q.insert(1, [10, 20] * u.m, axis=0)
+        <Quantity [[  1.,  2.],
+                   [ 10., 20.],
+                   [  3.,  4.]] m>
+
+        >>> q.insert(1, 10 * u.m, axis=1)
+        <Quantity [[  1., 10.,  2.],
+                   [  3., 10.,  4.]] m>
+
+        """
+        out_array = np.insert(self.value, obj, self._to_own_unit(values), axis)
+        return self._new_view(out_array)
+
+
+class SpecificTypeQuantity(Quantity):
         """
         if unit is None or unit is self.unit:
             value = self.view(np.ndarray)
@@ -719,14 +818,14 @@ class Quantity(np.ndarray, metaclass=InheritDocstrings):
             else:
                 value = self.view(np.ndarray)
                 if not is_effectively_unity(scale):
-                    # not in-place!
-                    value = value * scale
+        return self._wrap_function(np.var, axis, dtype,
+                                   out=out, ddof=ddof)
 
-        return value if self.shape else (value[()] if self.dtype.fields
-                                         else value.item())
+    def std(self, axis=None, dtype=None, out=None, ddof=0):
+        return self._wrap_function(np.std, axis, dtype, out=out, ddof=ddof)
 
-    value = property(to_value,
-                     doc="""The numerical value of this instance.
+    def mean(self, axis=None, dtype=None, out=None):
+        return self._wrap_function(np.mean, axis, dtype, out=out)
 
     See also
     --------
