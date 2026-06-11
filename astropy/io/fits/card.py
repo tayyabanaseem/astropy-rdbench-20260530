@@ -531,14 +531,12 @@ class Card(_Verify):
 
         Returns `False` otherwise.
         """
-
-        if not self._verified:
-            # The card image has not been parsed yet; compare directly with the
-            # string representation of a blank card
-            return self._image == BLANK_CARD
-
-        # If the keyword, value, and comment are all empty (for self.value
-        # explicitly check that it is a string value, since a blank value is
+        card = cls()
+        if isinstance(image, bytes):
+            image = image.decode('ascii')
+        card._image = _pad(image)
+        card._verified = False
+        return card
         # returned as '')
         return (not self.keyword and
                 (isinstance(self.value, str) and not self.value) and
