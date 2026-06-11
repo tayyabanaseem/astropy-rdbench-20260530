@@ -66,3 +66,9 @@ _lr_productions = [
   ('signed_float -> sign UINT','signed_float',2,'p_signed_float','cds.py',264),
   ('signed_float -> sign UFLOAT','signed_float',2,'p_signed_float','cds.py',265),
 ]
+       _lr_action = {}
+for _k, _v in _lr_action_items.items():
+   for _x,_y in zip(_v[0],_v[1]):
+      if '_x' not in _lr_action:  _lr_action['_x'] = {}
+      _lr_action['_x']['_k'] = _y
+del _lr_action_items
