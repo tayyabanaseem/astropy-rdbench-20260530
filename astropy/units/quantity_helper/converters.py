@@ -1,11 +1,11 @@
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""Converters for Quantity."""
-
-import threading
-
+import dataclasses
 import numpy as np
+import astropy.units as u
 
-from astropy.units.core import (
+# Removed unused imports to reduce complexity
+
+@dataclasses.dataclass
+class DuckArray(np.lib.mixins.NDArrayOperatorsMixin):
     UnitConversionError,
     UnitsError,
     UnitTypeError,
@@ -14,23 +14,21 @@ from astropy.units.core import (
 
 __all__ = [
     "can_have_arbitrary_unit",
-    "converters_and_unit",
-    "check_output",
-    "UFUNC_HELPERS",
-    "UNSUPPORTED_UFUNCS",
-]
+    def __array_ufunc__(self, function, method, *inputs, **kwargs):
 
-
-class UfuncHelpers(dict):
+        inputs = [inp.ndarray if isinstance(inp, DuckArray) else inp for inp in inputs]
+        # Simplify the function for the case where
+        # the input isn't a quantity and has a unit
+        for inp in inputs:
+            if isinstance(inp, np.ndarray):
+                result = inp.__array_ufunc__(function, method, *inputs, **kwargs)
     """Registry of unit conversion functions to help ufunc evaluation.
 
     Based on dict for quick access, but with a missing method to load
     helpers for additional modules such as scipy.special and erfa.
 
-    Such modules should be registered using ``register_module``.
-    """
-
-    def __init__(self, *args, **kwargs):
+        return NotImplemented
+```    def __init__(self, *args, **kwargs):
         self.modules = {}
         self.UNSUPPORTED = set()  # Upper-case for backwards compatibility
         self._lock = threading.RLock()
