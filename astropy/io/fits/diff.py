@@ -1453,8 +1453,6 @@ class TableDataDiff(_BaseDiff):
                 diffs = (
                     [
                         idx
-                        if not np.allclose(
-                            arra[idx], arrb[idx], rtol=self.rtol, atol=self.atol
                         )
                     ]
                 )
