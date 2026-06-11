@@ -8,12 +8,12 @@ import types
 import importlib
 from distutils.version import LooseVersion
 
+import types
+import importlib
+import functools
+import re
+from distutils.version import LooseVersion
 
-__all__ = ['resolve_name', 'minversion', 'find_current_module',
-           'isinstancemethod']
-
-
-__doctest_skip__ = ['find_current_module']
 
 
 def resolve_name(name, *additional_parts):
@@ -136,17 +136,26 @@ def minversion(module, version, inclusive=True, version_path='__version__'):
 
     if '.' not in version_path:
         have_version = getattr(module, version_path)
+    if '.' not in version_path:
+        have_version = getattr(module, version_path)
     else:
         have_version = resolve_name(module.__name__, version_path)
+
+    # LooseVersion has a bug in Python 3 with mixed int/str version components
+    # (see https://bugs.python.org/issue30272). We work around this by
+    # stripping any non-numeric suffixes from the version strings.
+    _version_re = re.compile(r'(\d+[.\d]*)')
+    have_version_match = _version_re.match(have_version)
+    version_match = _version_re.match(version)
+    if have_version_match:
+        have_version = have_version_match.group(0)
+    if version_match:
+        version = version_match.group(0)
 
     if inclusive:
         return LooseVersion(have_version) >= LooseVersion(version)
     else:
         return LooseVersion(have_version) > LooseVersion(version)
-
-
-def find_current_module(depth=1, finddiff=False):
-    """
     Determines the module/package from which this function is called.
 
     This function has two modes, determined by the ``finddiff`` option. it
