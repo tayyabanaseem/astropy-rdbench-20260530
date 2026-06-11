@@ -74,18 +74,19 @@ class BaseTimeSeries(QTable):
                                  "as the first column{} but time series has no columns"
                                  .format(self.__class__.__name__, required_columns[0], plural))
 
-            elif self.colnames[:len(required_columns)] != required_columns:
+            if not hasattr(self, '_required_columns'):
+                return
 
-                raise ValueError("{} object is invalid - expected '{}' "
-                                 "as the first column{} but found '{}'"
-                                 .format(self.__class__.__name__, required_columns[0], plural, self.colnames[0]))
+            required = self._required_columns
+            present = [c for c in required if c in self.colnames]
+            
+            required_str = str(required)
+            present_str = str(present)
 
-            if (self._required_columns_relax
-                    and self._required_columns == self.colnames[:len(self._required_columns)]):
-                self._required_columns_relax = False
+            if present != required:
+                raise ValueError(f"TimeSeries object is invalid - required {required_str} as the first columns but found {present_str}")
 
-    @contextmanager
-    def _delay_required_column_checks(self):
+        # Register the hook
         self._required_columns_enabled = False
         yield
         self._required_columns_enabled = True
