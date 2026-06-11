@@ -1,13 +1,7 @@
-# Licensed under a 3-clause BSD style license - see LICNSE.rst
-
-# This module includes files automatically generated from ply (these end in
-# _lextab.py and _parsetab.py). To generate these files, remove them from this
-# folder, then build astropy and run the tests in-place:
-#
-#   python setup.py build_ext --inplace
-#   pytest astropy/units
-#
-# You can then commit the changes to the re-generated _lextab.py and
+# This file should not be edited directly. Regenerate cds_parsetab.py
+# by deleting it and then importing this module.
+# The grammar and parser implementation should handle division associativity
+# handling of multiple division operators in composite units.
 # _parsetab.py files.
 
 """Handles the CDS string format for units."""
